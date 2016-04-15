@@ -3,4 +3,4 @@
 ## Author:
 ## Version:
 
-BattleNetGroups.lua
+FriendGroups.lua

@@ -1,0 +1,6 @@
+## Interface: 60200
+## Title: Friend Groups
+## Author:
+## Version:
+
+BattleNetGroups.lua

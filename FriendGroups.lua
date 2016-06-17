@@ -1,4 +1,5 @@
 local hooks = {}
+local FrdGrp_collapsed
 
 local function Hook(source, target, secure)
     hooks[source] = _G[source]

@@ -1,4 +1,4 @@
-## Interface: 60200
+## Interface: 70000
 ## Title: Friend Groups
 ## Author: frankkkkk
 ## Version: 1.0

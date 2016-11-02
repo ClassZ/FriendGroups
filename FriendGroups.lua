@@ -9,6 +9,14 @@ local function Hook(source, target, secure)
     end
 end
 
+Hook("FriendsFrameTooltip_Show",function(but)
+	if ( but.buttonType == FRIENDS_BUTTON_TYPE_DIVIDER ) then
+		if FriendsTooltip:IsShown() then
+			FriendsTooltip:Hide()
+		end
+		return;
+	end
+end,true)-- Fixes tooltip showing on groups
 
 local FRIENDS_GROUP_NAME_COLOR = NORMAL_FONT_COLOR;
  
@@ -46,22 +54,23 @@ end
 
 local function FriendGroups_GetTopButton(offset)
     local remaining = offset
-    
     for i = 1, FriendButtons.count do
         local buttontype = FriendButtons[i].buttonType
-        local buttonheight;
-        if buttontype == FRIENDS_BUTTON_TYPE_WOW then
-            buttonheight = FRIENDS_BUTTON_NORMAL_HEIGHT
-        elseif buttontype == FRIENDS_BUTTON_TYPE_BNET then
-            buttonheight = FRIENDS_BUTTON_NORMAL_HEIGHT
-        else
-            buttonheight = FRIENDS_BUTTON_HEADER_HEIGHT
-        end
-        
-        if buttonheight >= remaining then
-            return i - 1, remaining
-        else
-			remaining = remaining - buttonheight
+		if buttontype then
+			local buttonheight;
+			if buttontype == FRIENDS_BUTTON_TYPE_WOW then
+				buttonheight = FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_WOW]
+			elseif buttontype == FRIENDS_BUTTON_TYPE_BNET then
+				buttonheight = FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_BNET]
+			else
+				buttonheight = FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_DIVIDER]
+			end
+
+			if buttonheight >= remaining then
+				return i - 1, remaining
+			else
+				remaining = remaining - buttonheight
+			end
 		end
     end
     
@@ -74,24 +83,25 @@ local function FriendGroups_UpdateFriends()
     local buttons = scrollFrame.buttons;
     local numButtons = #buttons;
     local numFriendButtons = FriendButtons.count;
-     
+
     local nameText, nameColor, infoText, broadcastText; 
- 
+
     local height;
     local usedHeight = 0;
  
     local hasTravelPass = true;
     local hasTravelPassButton;
-    local canInvite = FriendsFrame_HasInvitePermission();
-     
-    FriendsFrameOfflineHeader:Hide();
+
+    scrollFrame.dividerPool:ReleaseAll();
+	scrollFrame.invitePool:ReleaseAll();
+	scrollFrame.PendingInvitesHeaderButton:Hide();
     for i = 1, numButtons do
         local button = buttons[i];
         local index = offset + i;
         if index <= numFriendButtons then --and usedHeight < FRIENDS_SCROLLFRAME_HEIGHT then
             button.buttonType = FriendButtons[index].buttonType;
             button.id = FriendButtons[index].id;
-			height = FRIENDS_BUTTON_NORMAL_HEIGHT;
+			height = FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_BNET];
             hasTravelPassButton = false;
             
             button.status:Show()
@@ -183,7 +193,7 @@ local function FriendGroups_UpdateFriends()
                     -- travel pass
                     if ( hasTravelPass ) then
                         hasTravelPassButton = true;
-                        local restriction = FriendsFrame_GetInviteRestriction(button.id, canInvite);
+                        local restriction = FriendsFrame_GetInviteRestriction(button.id);
                         if ( restriction == INVITE_RESTRICTION_NONE ) then
                             button.travelPassButton:Enable();
                         else
@@ -203,9 +213,9 @@ local function FriendGroups_UpdateFriends()
                 end
                 FriendsFrame_SummonButton_Update(button.summonButton);
             else    -- header
-                height = FRIENDS_BUTTON_HEADER_HEIGHT;
+                height = FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_DIVIDER];
                 nameText = nil;
-                
+				button.buttonType = FRIENDS_BUTTON_TYPE_DIVIDER
                 local title;
                 local group = FriendButtons[index].text
                 if group == "" then
@@ -347,8 +357,7 @@ local function FriendGroups_Update()
     local numBNetOffline = numBNetTotal - numBNetOnline;
     local numWoWTotal, numWoWOnline = GetNumFriends();
     local numWoWOffline = numWoWTotal - numWoWOnline;
-     
-    FriendsMicroButtonCount:SetText(numBNetOnline + numWoWOnline);
+
     if ( not FriendsListFrame:IsShown() ) then
         return;
     end
@@ -375,7 +384,7 @@ local function FriendGroups_Update()
             IncrementGroup(group, isOnline)
             if (not FriendGroups_SavedVars.hide_offline or isOnline) and not FriendGroups_SavedVars.collapsed[group] then
                 buttonCount = buttonCount + 1
-                totalScrollHeight = totalScrollHeight + FRIENDS_BUTTON_NORMAL_HEIGHT
+                totalScrollHeight = totalScrollHeight + FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_BNET]
             end
         end
     end
@@ -389,14 +398,14 @@ local function FriendGroups_Update()
             IncrementGroup(group, connected)
             if not FriendGroups_SavedVars.collapsed[group] then
                 buttonCount = buttonCount + 1
-                totalScrollHeight = totalScrollHeight + FRIENDS_BUTTON_NORMAL_HEIGHT
+                totalScrollHeight = totalScrollHeight + FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_WOW]
             end
         end
     end
     
     buttonCount = buttonCount + GroupCount
     
-    totalScrollHeight = totalScrollHeight + GroupCount * FRIENDS_BUTTON_HEADER_HEIGHT
+    totalScrollHeight = totalScrollHeight + GroupCount * FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_DIVIDER]
     
     if buttonCount > #FriendButtons then
         for i = #FriendButtons + 1, buttonCount do
@@ -757,7 +766,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
         FriendsFrameFriendsScrollFrame.update = FriendGroups_UpdateFriends
 		
 		--add some more buttons
-		FriendsFrameFriendsScrollFrame.buttons[1]:SetHeight(FRIENDS_BUTTON_HEADER_HEIGHT)
+		FriendsFrameFriendsScrollFrame.buttons[1]:SetHeight(FRIENDS_FRAME_FRIENDS_FRIENDS_HEIGHT)
 		HybridScrollFrame_CreateButtons(FriendsFrameFriendsScrollFrame, "FriendsFrameButtonTemplate")
         
         table.remove(UnitPopupMenus["BN_FRIEND"], 5) --remove target option

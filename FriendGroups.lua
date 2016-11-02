@@ -8,7 +8,7 @@ local function Hook(source, target, secure)
         _G[source] = target
     end
 end
-
+-------------------------- Beware might be ugly fixes under --------------------
 Hook("FriendsFrameTooltip_Show",function(but)
 	if ( but.buttonType == FRIENDS_BUTTON_TYPE_DIVIDER ) then
 		if FriendsTooltip:IsShown() then
@@ -18,6 +18,54 @@ Hook("FriendsFrameTooltip_Show",function(but)
 	end
 end,true)-- Fixes tooltip showing on groups
 
+HybridScrollFrame_SetOffset = function(itself,off)
+	local buttons = itself.buttons
+	local buttonHeight = itself.buttonHeight;
+	local element, overflow;
+
+	local scrollHeight = 0;
+
+	local largeButtonTop = itself.largeButtonTop
+	if ( itself.dynamic ) then --This is for frames where buttons will have different heights
+		if ( off < buttonHeight ) then
+			-- a little optimization
+			element = 0;
+			scrollHeight = off;
+		else
+			element, scrollHeight = itself.dynamic(off);
+		end
+	elseif ( largeButtonTop and off >= largeButtonTop ) then
+		local largeButtonHeight = itself.largeButtonHeight;
+		-- Initial offset...
+		element = largeButtonTop / buttonHeight;
+
+		if ( off >= (largeButtonTop + largeButtonHeight) ) then
+			element = element + 1;
+
+			local leftovers = (off - (largeButtonTop + largeButtonHeight) );
+
+			element = element + ( leftovers / buttonHeight );
+			overflow = element - math.floor(element);
+			scrollHeight = overflow * buttonHeight;
+		else
+			scrollHeight = math.abs(off - largeButtonTop);
+		end
+	else
+		element = off / buttonHeight;
+		overflow = element - math.floor(element);
+		scrollHeight = overflow * buttonHeight;
+	end
+
+	if ( math.floor(itself.offset or 0) ~= math.floor(element or 0) and itself.update ) then
+		itself.offset = element;
+		itself:update();
+	else
+		itself.offset = element;
+	end
+
+	itself:SetVerticalScroll(scrollHeight or itself:GetVerticalScroll());
+end
+-------------------------- End of the possible uggly fixes --------------------
 local FRIENDS_GROUP_NAME_COLOR = NORMAL_FONT_COLOR;
  
 local INVITE_RESTRICTION_NO_TOONS = 0;

@@ -53,28 +53,23 @@ local function ClassColourCode(class)
 end
 
 local function FriendGroups_GetTopButton(offset)
-    local remaining = offset
-    for i = 1, FriendButtons.count do
-        local buttontype = FriendButtons[i].buttonType
-		if buttontype then
-			local buttonheight;
-			if buttontype == FRIENDS_BUTTON_TYPE_WOW then
-				buttonheight = FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_WOW]
-			elseif buttontype == FRIENDS_BUTTON_TYPE_BNET then
-				buttonheight = FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_BNET]
-			else
-				buttonheight = FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_DIVIDER]
-			end
-
-			if buttonheight >= remaining then
-				return i - 1, remaining
-			else
-				remaining = remaining - buttonheight
-			end
+	local usedHeight = 0;
+	for i = 1, FriendButtons.count do
+		--This Hack is needed because of line 425
+		local typeB
+		if not FriendButtons[i].buttonType then
+			typeB = 1
+		else
+			typeB = FriendButtons[i].buttonType
 		end
-    end
-    
-    return 0, 0
+
+		local buttonHeight = FRIENDS_BUTTON_HEIGHTS[typeB];
+		if ( usedHeight + buttonHeight >= offset ) then
+			return i - 1, offset - usedHeight;
+		else
+			usedHeight = usedHeight + buttonHeight;
+		end
+	end
 end
 
 local function FriendGroups_UpdateFriends()
@@ -427,7 +422,7 @@ local function FriendGroups_Update()
     for _,group in ipairs(GroupSorted) do
         index = index + 1
         
-        FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_HEADER
+        FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_HEADER -- Should be FRIENDS_BUTTON_TYPE_DIVIDER but does not show otherwise
         FriendButtons[index].text = group
         if not FriendGroups_SavedVars.collapsed[group] then
             for i = 1, numBNetOnline do

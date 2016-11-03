@@ -8,64 +8,7 @@ local function Hook(source, target, secure)
         _G[source] = target
     end
 end
--------------------------- Beware might be ugly fixes under --------------------
-Hook("FriendsFrameTooltip_Show",function(but)
-	if ( but.buttonType == FRIENDS_BUTTON_TYPE_DIVIDER ) then
-		if FriendsTooltip:IsShown() then
-			FriendsTooltip:Hide()
-		end
-		return;
-	end
-end,true)-- Fixes tooltip showing on groups
 
-HybridScrollFrame_SetOffset = function(itself,off)
-	local buttons = itself.buttons
-	local buttonHeight = itself.buttonHeight;
-	local element, overflow;
-
-	local scrollHeight = 0;
-
-	local largeButtonTop = itself.largeButtonTop
-	if ( itself.dynamic ) then --This is for frames where buttons will have different heights
-		if ( off < buttonHeight ) then
-			-- a little optimization
-			element = 0;
-			scrollHeight = off;
-		else
-			element, scrollHeight = itself.dynamic(off);
-		end
-	elseif ( largeButtonTop and off >= largeButtonTop ) then
-		local largeButtonHeight = itself.largeButtonHeight;
-		-- Initial offset...
-		element = largeButtonTop / buttonHeight;
-
-		if ( off >= (largeButtonTop + largeButtonHeight) ) then
-			element = element + 1;
-
-			local leftovers = (off - (largeButtonTop + largeButtonHeight) );
-
-			element = element + ( leftovers / buttonHeight );
-			overflow = element - math.floor(element);
-			scrollHeight = overflow * buttonHeight;
-		else
-			scrollHeight = math.abs(off - largeButtonTop);
-		end
-	else
-		element = off / buttonHeight;
-		overflow = element - math.floor(element);
-		scrollHeight = overflow * buttonHeight;
-	end
-
-	if ( math.floor(itself.offset or 0) ~= math.floor(element or 0) and itself.update ) then
-		itself.offset = element;
-		itself:update();
-	else
-		itself.offset = element;
-	end
-
-	itself:SetVerticalScroll(scrollHeight or itself:GetVerticalScroll());
-end
--------------------------- End of the possible uggly fixes --------------------
 local FRIENDS_GROUP_NAME_COLOR = NORMAL_FONT_COLOR;
  
 local INVITE_RESTRICTION_NO_TOONS = 0;
@@ -98,6 +41,54 @@ local function ClassColourCode(class)
     end
     local colour = RAID_CLASS_COLORS[class]
     return string.format("|cFF%02x%02x%02x", colour.r*255, colour.g*255, colour.b*255)
+end
+
+local function HybridScrollFrame_SetOffsetFixed (self, offset)
+	local buttons = self.buttons
+	local buttonHeight = self.buttonHeight;
+	local element, overflow;
+
+	local scrollHeight = 0;
+
+	local largeButtonTop = self.largeButtonTop
+	if ( self.dynamic ) then --This is for frames where buttons will have different heights
+		if ( offset < buttonHeight ) then
+			-- a little optimization
+			element = 0;
+			scrollHeight = offset;
+		else
+			element, scrollHeight = self.dynamic(offset);
+		end
+	elseif ( largeButtonTop and offset >= largeButtonTop ) then
+		local largeButtonHeight = self.largeButtonHeight;
+		-- Initial offset...
+		element = largeButtonTop / buttonHeight;
+
+		if ( offset >= (largeButtonTop + largeButtonHeight) ) then
+			element = element + 1;
+
+			local leftovers = (offset - (largeButtonTop + largeButtonHeight) );
+
+			element = element + ( leftovers / buttonHeight );
+			overflow = element - math.floor(element);
+			scrollHeight = overflow * buttonHeight;
+		else
+			scrollHeight = math.abs(offset - largeButtonTop);
+		end
+	else
+		element = offset / buttonHeight;
+		overflow = element - math.floor(element);
+		scrollHeight = overflow * buttonHeight;
+	end
+
+	if ( math.floor(self.offset or 0) ~= math.floor(element or 0) and self.update ) then
+		self.offset = element;
+		self:update();
+	else
+		self.offset = element;
+	end
+
+	self:SetVerticalScroll(scrollHeight or self:GetVerticalScroll());
 end
 
 local function FriendGroups_GetTopButton(offset)
@@ -330,6 +321,13 @@ local function FriendGroups_UpdateFriends()
     if hooks["FriendsFrame_UpdateFriends"] then
         hooks["FriendsFrame_UpdateFriends"]()
     end
+
+	-- Delete unused groups in the collapsed part
+	for key,_ in pairs(FriendGroups_SavedVars.collapsed) do
+		if not GroupTotal[key] then
+			FriendGroups_SavedVars.collapsed[key] = nil
+		end
+	end
 end
 
 local function FillGroups(groups, note, ...)
@@ -804,7 +802,15 @@ frame:SetScript("OnEvent", function(self, event, ...)
         Hook("FriendsFrameFriendButton_OnClick", FriendGroups_OnClick)
         Hook("UnitPopup_OnClick", FriendGroups_OnFriendMenuClick, true)
         Hook("UnitPopup_HideButtons", FriendGroups_HideButtons, true)
-        
+        Hook("FriendsFrameTooltip_Show",function(button)
+			if ( button.buttonType == FRIENDS_BUTTON_TYPE_DIVIDER ) then
+				if FriendsTooltip:IsShown() then
+					FriendsTooltip:Hide()
+				end
+				return;
+			end
+		end,true)-- Fixes tooltip showing on groups
+
         FriendsFrameFriendsScrollFrame.dynamic = FriendGroups_GetTopButton
         FriendsFrameFriendsScrollFrame.update = FriendGroups_UpdateFriends
 		
@@ -812,6 +818,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
 		FriendsFrameFriendsScrollFrame.buttons[1]:SetHeight(FRIENDS_FRAME_FRIENDS_FRIENDS_HEIGHT)
 		HybridScrollFrame_CreateButtons(FriendsFrameFriendsScrollFrame, "FriendsFrameButtonTemplate")
         
+		HybridScrollFrame_SetOffset=HybridScrollFrame_SetOffsetFixed
         table.remove(UnitPopupMenus["BN_FRIEND"], 5) --remove target option
         
         --add our add/remove group buttons to the friend list popup menus

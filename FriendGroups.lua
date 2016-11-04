@@ -33,12 +33,21 @@ UnitPopupMenus["FRIEND_GROUP_ADD"] = { }
 UnitPopupMenus["FRIEND_GROUP_DEL"] = { }
 
 local function ClassColourCode(class)
+	local initialClass = class
     for k, v in pairs(LOCALIZED_CLASS_NAMES_FEMALE) do
         if class == v then
             class = k
             break
         end
     end
+	if class == initialClass then
+		for k, v in pairs(LOCALIZED_CLASS_NAMES_MALE) do
+			if class == v then
+				class = k
+				break
+			end
+		end
+	end
     local colour = RAID_CLASS_COLORS[class]
     return string.format("|cFF%02x%02x%02x", colour.r*255, colour.g*255, colour.b*255)
 end
@@ -150,7 +159,7 @@ local function FriendGroups_UpdateFriends()
                 local name, level, class, area, connected, status, note = GetFriendInfo(FriendButtons[index].id);
                 broadcastText = nil;
                 if ( connected ) then
-                    button.background:SetTexture(FRIENDS_WOW_BACKGROUND_COLOR.r, FRIENDS_WOW_BACKGROUND_COLOR.g, FRIENDS_WOW_BACKGROUND_COLOR.b, FRIENDS_WOW_BACKGROUND_COLOR.a);
+                    button.background:SetColorTexture(FRIENDS_WOW_BACKGROUND_COLOR.r, FRIENDS_WOW_BACKGROUND_COLOR.g, FRIENDS_WOW_BACKGROUND_COLOR.b, FRIENDS_WOW_BACKGROUND_COLOR.a);
                     if ( status == "" ) then
                         button.status:SetTexture(FRIENDS_TEXTURE_ONLINE);
                     elseif ( status == CHAT_FLAG_AFK ) then
@@ -164,7 +173,7 @@ local function FriendGroups_UpdateFriends()
                     nameText = name..", "..format(FRIENDS_LEVEL_TEMPLATE, level, class);
                     nameColor = FRIENDS_WOW_NAME_COLOR;
                 else
-                    button.background:SetTexture(FRIENDS_OFFLINE_BACKGROUND_COLOR.r, FRIENDS_OFFLINE_BACKGROUND_COLOR.g, FRIENDS_OFFLINE_BACKGROUND_COLOR.b, FRIENDS_OFFLINE_BACKGROUND_COLOR.a);
+                    button.background:SetColorTexture(FRIENDS_OFFLINE_BACKGROUND_COLOR.r, FRIENDS_OFFLINE_BACKGROUND_COLOR.g, FRIENDS_OFFLINE_BACKGROUND_COLOR.b, FRIENDS_OFFLINE_BACKGROUND_COLOR.a);
                     button.status:SetTexture(FRIENDS_TEXTURE_OFFLINE);
                     nameText = name;
                     nameColor = FRIENDS_GRAY_COLOR;
@@ -193,18 +202,19 @@ local function FriendGroups_UpdateFriends()
 				if ( characterName ) then
 					if ( client == BNET_CLIENT_WOW and CanCooperateWithGameAccount(toonID) ) then
 						local colour = FriendGroups_SavedVars.colour_classes and ClassColourCode(select(8, BNGetGameAccountInfo(toonID))) or FRIENDS_WOW_NAME_COLOR_CODE
-						nameText = nameText.." "..colour.."("..characterName..")";
+						local level = select(11, BNGetGameAccountInfo(toonID));
+						nameText = nameText.." "..colour.."("..characterName.." - "..level..")|r";
 					else
 						if ( ENABLE_COLORBLIND_MODE == "1" ) then
 							characterName = characterName..CANNOT_COOPERATE_LABEL;
 						end
-						nameText = nameText.." "..FRIENDS_OTHER_NAME_COLOR_CODE.."("..characterName..")";
+						nameText = nameText.." "..FRIENDS_OTHER_NAME_COLOR_CODE.."("..characterName..")|r";
 					end
 				end
 				
                 if ( isOnline ) then
                     local _, _, _, realmName, realmID, faction, _, _, _, zoneName, _, gameText = BNGetGameAccountInfo(toonID);
-                    button.background:SetTexture(FRIENDS_BNET_BACKGROUND_COLOR.r, FRIENDS_BNET_BACKGROUND_COLOR.g, FRIENDS_BNET_BACKGROUND_COLOR.b, FRIENDS_BNET_BACKGROUND_COLOR.a);
+                    button.background:SetColorTexture(FRIENDS_BNET_BACKGROUND_COLOR.r, FRIENDS_BNET_BACKGROUND_COLOR.g, FRIENDS_BNET_BACKGROUND_COLOR.b, FRIENDS_BNET_BACKGROUND_COLOR.a);
                     if ( isAFK ) then
                         button.status:SetTexture(FRIENDS_TEXTURE_AFK);
                     elseif ( isDND ) then
@@ -235,7 +245,7 @@ local function FriendGroups_UpdateFriends()
                         end
                     end
                 else
-                    button.background:SetTexture(FRIENDS_OFFLINE_BACKGROUND_COLOR.r, FRIENDS_OFFLINE_BACKGROUND_COLOR.g, FRIENDS_OFFLINE_BACKGROUND_COLOR.b, FRIENDS_OFFLINE_BACKGROUND_COLOR.a);
+                    button.background:SetColorTexture(FRIENDS_OFFLINE_BACKGROUND_COLOR.r, FRIENDS_OFFLINE_BACKGROUND_COLOR.g, FRIENDS_OFFLINE_BACKGROUND_COLOR.b, FRIENDS_OFFLINE_BACKGROUND_COLOR.a);
                     button.status:SetTexture(FRIENDS_TEXTURE_OFFLINE);
                     nameColor = FRIENDS_GRAY_COLOR;
                     button.gameIcon:Hide();

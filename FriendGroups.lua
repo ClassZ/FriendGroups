@@ -53,7 +53,6 @@ local function ClassColourCode(class)
 end
 
 local function FriendGroups_GetTopButton(offset)
-	print("|cff000000|r") --Previous solution was a return 0,0 in any case because somehow the other return is not reached
 	local usedHeight = 0;
 	for i = 1, FriendButtons.count do
 		--This Hack is needed because of line 425
@@ -71,6 +70,7 @@ local function FriendGroups_GetTopButton(offset)
 			usedHeight = usedHeight + buttonHeight;
 		end
 	end
+	return 0,0
 end
 
 local function FriendGroups_UpdateFriends()

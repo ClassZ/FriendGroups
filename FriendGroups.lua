@@ -52,55 +52,8 @@ local function ClassColourCode(class)
     return string.format("|cFF%02x%02x%02x", colour.r*255, colour.g*255, colour.b*255)
 end
 
-local function HybridScrollFrame_SetOffsetFixed (self, offset)
-	local buttons = self.buttons
-	local buttonHeight = self.buttonHeight;
-	local element, overflow;
-
-	local scrollHeight = 0;
-
-	local largeButtonTop = self.largeButtonTop
-	if ( self.dynamic ) then --This is for frames where buttons will have different heights
-		if ( offset < buttonHeight ) then
-			-- a little optimization
-			element = 0;
-			scrollHeight = offset;
-		else
-			element, scrollHeight = self.dynamic(offset);
-		end
-	elseif ( largeButtonTop and offset >= largeButtonTop ) then
-		local largeButtonHeight = self.largeButtonHeight;
-		-- Initial offset...
-		element = largeButtonTop / buttonHeight;
-
-		if ( offset >= (largeButtonTop + largeButtonHeight) ) then
-			element = element + 1;
-
-			local leftovers = (offset - (largeButtonTop + largeButtonHeight) );
-
-			element = element + ( leftovers / buttonHeight );
-			overflow = element - math.floor(element);
-			scrollHeight = overflow * buttonHeight;
-		else
-			scrollHeight = math.abs(offset - largeButtonTop);
-		end
-	else
-		element = offset / buttonHeight;
-		overflow = element - math.floor(element);
-		scrollHeight = overflow * buttonHeight;
-	end
-
-	if ( math.floor(self.offset or 0) ~= math.floor(element or 0) and self.update ) then
-		self.offset = element;
-		self:update();
-	else
-		self.offset = element;
-	end
-
-	self:SetVerticalScroll(scrollHeight or self:GetVerticalScroll());
-end
-
 local function FriendGroups_GetTopButton(offset)
+	print("|cff000000|r") --Previous solution was a return 0,0 in any case because somehow the other return is not reached
 	local usedHeight = 0;
 	for i = 1, FriendButtons.count do
 		--This Hack is needed because of line 425
@@ -828,7 +781,6 @@ frame:SetScript("OnEvent", function(self, event, ...)
 		FriendsFrameFriendsScrollFrame.buttons[1]:SetHeight(FRIENDS_FRAME_FRIENDS_FRIENDS_HEIGHT)
 		HybridScrollFrame_CreateButtons(FriendsFrameFriendsScrollFrame, "FriendsFrameButtonTemplate")
         
-		Hook("HybridScrollFrame_SetOffset",function(itself,offset) if(itself:GetName()=="FriendsFrameFriendsScrollFrame") then HybridScrollFrame_SetOffsetFixed(itself,offset) end end)
         table.remove(UnitPopupMenus["BN_FRIEND"], 5) --remove target option
         
         --add our add/remove group buttons to the friend list popup menus

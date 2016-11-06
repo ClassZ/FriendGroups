@@ -828,7 +828,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
 		FriendsFrameFriendsScrollFrame.buttons[1]:SetHeight(FRIENDS_FRAME_FRIENDS_FRIENDS_HEIGHT)
 		HybridScrollFrame_CreateButtons(FriendsFrameFriendsScrollFrame, "FriendsFrameButtonTemplate")
         
-		HybridScrollFrame_SetOffset=HybridScrollFrame_SetOffsetFixed
+		Hook("HybridScrollFrame_SetOffset",function(itself,offset) if(itself:GetName()=="FriendsFrameFriendsScrollFrame") then HybridScrollFrame_SetOffsetFixed(itself,offset) end end)
         table.remove(UnitPopupMenus["BN_FRIEND"], 5) --remove target option
         
         --add our add/remove group buttons to the friend list popup menus

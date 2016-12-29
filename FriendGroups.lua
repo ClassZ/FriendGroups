@@ -32,6 +32,7 @@ local GroupSorted = {}
 
 local FriendRequestString = string.sub(FRIEND_REQUESTS,1,-5)
 
+local OPEN_DROPDOWNMENUS_SAVE = nil
 local friend_popup_menus = { "FRIEND", "FRIEND_OFFLINE", "BN_FRIEND", "BN_FRIEND_OFFLINE" }
 UnitPopupButtons["FRIEND_GROUP_NEW"] = { text = "Create new group", dist = 0 }
 UnitPopupButtons["FRIEND_GROUP_ADD"] = { text = "Add to group", dist = 0, nested = 1 }
@@ -666,6 +667,12 @@ local function FriendGroups_OnClick(self, button)
     end
 end
 
+local function FriendGroups_SaveOpenMenu()
+	if OPEN_DROPDOWNMENUS then
+		OPEN_DROPDOWNMENUS_SAVE = CopyTable(OPEN_DROPDOWNMENUS)
+	end
+end
+
 -- when one of our new menu items is clicked
 local function FriendGroups_OnFriendMenuClick(self)
     if not self.value then
@@ -678,9 +685,9 @@ local function FriendGroups_OnFriendMenuClick(self)
 
     if add or del or creating then
         local dropdown = UIDROPDOWNMENU_INIT_MENU
-        local source = OPEN_DROPDOWNMENUS[1] and OPEN_DROPDOWNMENUS[1].which or self.owner -- OPEN_DROPDOWNMENUS is nil on click
+        local source = OPEN_DROPDOWNMENUS_SAVE[1] and OPEN_DROPDOWNMENUS_SAVE[1].which or self.owner -- OPEN_DROPDOWNMENUS is nil on click
 
-        if dropdown.bnetIDAccount then --source == "BN_FRIEND" or source == "BN_FRIEND_OFFLINE" then
+        if source == "BN_FRIEND" or source == "BN_FRIEND_OFFLINE" then
 			local note = select(13, BNGetFriendInfoByID(dropdown.bnetIDAccount))
 			if creating then
 				StaticPopup_Show("FRIEND_GROUP_CREATE", nil, nil, { id = dropdown.bnetIDAccount, note = note, set = BNSetFriendNote })
@@ -692,10 +699,10 @@ local function FriendGroups_OnFriendMenuClick(self)
 				end
 				BNSetFriendNote(dropdown.bnetIDAccount, note)
 			end
-        else--if source == "FRIEND" or source == "FRIEND_OFFLINE" then
+        elseif source == "FRIEND" or source == "FRIEND_OFFLINE" then
             for i = 1, GetNumFriends() do
                 local name, _, _, _, _, _, note = GetFriendInfo(i)
-                if name:find(dropdown.name) then -- should be name == dropdown.name
+                if name:find(dropdown.name) then
 					if creating then
 						StaticPopup_Show("FRIEND_GROUP_CREATE", nil, nil, { id = i, note = note, set = SetFriendNotes })
 					else
@@ -740,7 +747,7 @@ local function FriendGroups_HideButtons()
         else
             for i = 1, GetNumFriends() do
                 local name, _, _, _, _, _, noteText = GetFriendInfo(i)
-                if name:find(dropdown.name)  then -- should be name == dropdown.name
+                if name:find(dropdown.name) then
                     note = noteText
                     break
                 end
@@ -907,6 +914,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
             Hook("FriendsFrame_UpdateFriends", FriendGroups_UpdateFriends)
         end
         Hook("FriendsFrameFriendButton_OnClick", FriendGroups_OnClick)
+        Hook("UnitPopup_ShowMenu", FriendGroups_SaveOpenMenu, true)
         Hook("UnitPopup_OnClick", FriendGroups_OnFriendMenuClick, true)
         Hook("UnitPopup_HideButtons", FriendGroups_HideButtons, true)
         Hook("FriendsFrameTooltip_Show",function(button)

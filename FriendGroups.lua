@@ -702,7 +702,7 @@ local function FriendGroups_OnFriendMenuClick(self)
         elseif source == "FRIEND" or source == "FRIEND_OFFLINE" then
             for i = 1, GetNumFriends() do
                 local name, _, _, _, _, _, note = GetFriendInfo(i)
-                if name:find(dropdown.name) then
+                if dropdown.name and name:find(dropdown.name) then
 					if creating then
 						StaticPopup_Show("FRIEND_GROUP_CREATE", nil, nil, { id = i, note = note, set = SetFriendNotes })
 					else
@@ -747,7 +747,7 @@ local function FriendGroups_HideButtons()
         else
             for i = 1, GetNumFriends() do
                 local name, _, _, _, _, _, noteText = GetFriendInfo(i)
-                if name:find(dropdown.name) then
+                if dropdown.name and name:find(dropdown.name) then
                     note = noteText
                     break
                 end

@@ -1,7 +1,7 @@
 ## Interface: 70100
 ## Title: Friend Groups
 ## Author: Mikeprod
-## Version: 7.1.4
+## Version: 7.1.5
 ## Notes: Addon managing your contact list with groups
 ## SavedVariables: FriendGroups_SavedVars
 ## X-Issues: https://github.com/Mikeprod/FriendGroups/issues/

@@ -1,4 +1,4 @@
-## Interface: 70100
+## Interface: 70200
 ## Title: Friend Groups
 ## Author: Mikeprod
 ## Version: 7.1.4

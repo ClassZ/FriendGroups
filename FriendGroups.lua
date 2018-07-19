@@ -34,9 +34,9 @@ local FriendRequestString = string.sub(FRIEND_REQUESTS,1,-5)
 
 local OPEN_DROPDOWNMENUS_SAVE = nil
 local friend_popup_menus = { "FRIEND", "FRIEND_OFFLINE", "BN_FRIEND", "BN_FRIEND_OFFLINE" }
-UnitPopupButtons["FRIEND_GROUP_NEW"] = { text = "Create new group", dist = 0 }
-UnitPopupButtons["FRIEND_GROUP_ADD"] = { text = "Add to group", dist = 0, nested = 1 }
-UnitPopupButtons["FRIEND_GROUP_DEL"] = { text = "Remove from group", dist = 0, nested = 1 }
+UnitPopupButtons["FRIEND_GROUP_NEW"] = { text = "Create new group"}
+UnitPopupButtons["FRIEND_GROUP_ADD"] = { text = "Add to group", nested = 1}
+UnitPopupButtons["FRIEND_GROUP_DEL"] = { text = "Remove from group", nested = 1}
 UnitPopupMenus["FRIEND_GROUP_ADD"] = { }
 UnitPopupMenus["FRIEND_GROUP_DEL"] = { }
 
@@ -760,14 +760,14 @@ local function FriendGroups_HideButtons()
             if group ~= "" and not groups[group] then
                 local faux = "FGROUPADD_" .. group
                 --polluting the popup buttons list
-                UnitPopupButtons[faux] = { text = group, dist = 0 }
+                UnitPopupButtons[faux] = { text = group}
                 table.insert(UnitPopupMenus["FRIEND_GROUP_ADD"], faux)
             end
         end
         for group in pairs(groups) do
             if group ~= "" then
                 local faux = "FGROUPDEL_" .. group
-                UnitPopupButtons[faux] = { text = group, dist = 0 }
+                UnitPopupButtons[faux] = { text = group}
                 table.insert(UnitPopupMenus["FRIEND_GROUP_DEL"], faux)
             end
         end

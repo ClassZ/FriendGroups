@@ -11,12 +11,13 @@ end
 
 local FRIENDS_GROUP_NAME_COLOR = NORMAL_FONT_COLOR;
  
-local INVITE_RESTRICTION_NO_TOONS = 0;
+local INVITE_RESTRICTION_NO_GAME_ACCOUNTS = 0;
 local INVITE_RESTRICTION_CLIENT = 1;
 local INVITE_RESTRICTION_LEADER = 2;
 local INVITE_RESTRICTION_FACTION = 3;
 local INVITE_RESTRICTION_INFO = 4;
-local INVITE_RESTRICTION_NONE = 5;
+local INVITE_RESTRICTION_REGION = 5;
+local INVITE_RESTRICTION_NONE = 6;
 
 local ONE_MINUTE = 60;
 local ONE_HOUR = 60 * ONE_MINUTE;
@@ -85,16 +86,16 @@ local function FriendGroups_UpdateFriendButton(button)
 	local nameText, nameColor, infoText, broadcastText;
 	local hasTravelPassButton = false;
 	if ( button.buttonType == FRIENDS_BUTTON_TYPE_WOW ) then
-		local name, level, class, area, connected, status, note, isRaF, guid = GetFriendInfo(FriendButtons[index].id);
+		local info = C_FriendList.GetFriendInfo(FriendButtons[index].id); -- name, level, class, area, connected, status, note, isRaF, guid
 		broadcastText = nil;
-		if ( connected ) then
+		if ( info.connected ) then
 			button.background:SetColorTexture(FRIENDS_WOW_BACKGROUND_COLOR.r, FRIENDS_WOW_BACKGROUND_COLOR.g, FRIENDS_WOW_BACKGROUND_COLOR.b, FRIENDS_WOW_BACKGROUND_COLOR.a);
-			if ( status == "" ) then
-				button.status:SetTexture(FRIENDS_TEXTURE_ONLINE);
-			elseif ( status == CHAT_FLAG_AFK ) then
+			if ( info.afk ) then
 				button.status:SetTexture(FRIENDS_TEXTURE_AFK);
-			elseif ( status == CHAT_FLAG_DND ) then
+			elseif ( info.dnd ) then
 				button.status:SetTexture(FRIENDS_TEXTURE_DND);
+			else
+				button.status:SetTexture(FRIENDS_TEXTURE_ONLINE);
 			end
 
 			if FriendGroups_SavedVars.colour_classes then
@@ -102,7 +103,7 @@ local function FriendGroups_UpdateFriendButton(button)
 			else
 				nameColor = FRIENDS_WOW_NAME_COLOR;
 			end
-			nameText = name..", "..format(FRIENDS_LEVEL_TEMPLATE, level, class);
+			nameText = info.name..", "..format(FRIENDS_LEVEL_TEMPLATE, info.level, info.className);
 		else
 			button.background:SetColorTexture(FRIENDS_OFFLINE_BACKGROUND_COLOR.r, FRIENDS_OFFLINE_BACKGROUND_COLOR.g, FRIENDS_OFFLINE_BACKGROUND_COLOR.b, FRIENDS_OFFLINE_BACKGROUND_COLOR.a);
 			button.status:SetTexture(FRIENDS_TEXTURE_OFFLINE);
@@ -180,6 +181,7 @@ local function FriendGroups_UpdateFriendButton(button)
 
 			-- travel pass
 			hasTravelPassButton = true;
+			print(select(5,BNGetFriendInfo(button.id)),FriendsFrame_GetInviteRestriction(button.id),restriction == INVITE_RESTRICTION_NONE)
 			local restriction = FriendsFrame_GetInviteRestriction(button.id);
 			if ( restriction == INVITE_RESTRICTION_NONE ) then
 				button.travelPassButton:Enable();
@@ -594,7 +596,7 @@ local function FriendGroups_Update(forceUpdate)
 	if ( numBNetTotal + numWoWTotal > 0 ) then
 		-- get friend
 		if ( FriendsFrame.selectedFriendType == FRIENDS_BUTTON_TYPE_WOW ) then
-			selectedFriend = GetSelectedFriend();
+			selectedFriend = C_FriendList.GetSelectedFriend();
 		elseif ( FriendsFrame.selectedFriendType == FRIENDS_BUTTON_TYPE_BNET ) then
 			selectedFriend = BNGetSelectedFriend();
 		end
@@ -604,22 +606,7 @@ local function FriendGroups_Update(forceUpdate)
 			selectedFriend = 1;
 		end
 		-- check if friend is online
-		local isOnline;
-		if ( FriendsFrame.selectedFriendType == FRIENDS_BUTTON_TYPE_WOW ) then
-			local name, level, class, area;
-			name, level, class, area, isOnline = GetFriendInfo(selectedFriend);
-		elseif ( FriendsFrame.selectedFriendType == FRIENDS_BUTTON_TYPE_BNET ) then
-			local bnetIDAccount, accountName, battleTag, isBattleTag, characterName, bnetIDGameAccount, client;
-			bnetIDAccount, accountName, battleTag, isBattleTag, characterName, bnetIDGameAccount, client, isOnline = BNGetFriendInfo(selectedFriend);
-			if ( not accountName ) then
-				isOnline = false;
-			end
-		end
-		if ( isOnline ) then
-			FriendsFrameSendMessageButton:Enable();
-		else
-			FriendsFrameSendMessageButton:Disable();
-		end
+		FriendsFrameSendMessageButton:SetEnabled(FriendsList_CanWhisperFriend(FriendsFrame.selectedFriendType, selectedFriend));
 	else
 		FriendsFrameSendMessageButton:Disable();
 	end

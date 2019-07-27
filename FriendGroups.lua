@@ -10,14 +10,12 @@ local function Hook(source, target, secure)
 end
 
 local FRIENDS_GROUP_NAME_COLOR = NORMAL_FONT_COLOR;
- 
-local INVITE_RESTRICTION_NO_GAME_ACCOUNTS = 0;
-local INVITE_RESTRICTION_CLIENT = 1;
-local INVITE_RESTRICTION_LEADER = 2;
-local INVITE_RESTRICTION_FACTION = 3;
-local INVITE_RESTRICTION_INFO = 4;
-local INVITE_RESTRICTION_REGION = 5;
-local INVITE_RESTRICTION_NONE = 6;
+
+local INVITE_RESTRICTION_WOW_PROJECT_ID = 5;
+local INVITE_RESTRICTION_WOW_PROJECT_MAINLINE = 6;
+local INVITE_RESTRICTION_WOW_PROJECT_CLASSIC = 7;
+local INVITE_RESTRICTION_NONE = 8;
+local INVITE_RESTRICTION_MOBILE = 9;
 
 local ONE_MINUTE = 60;
 local ONE_HOUR = 60 * ONE_MINUTE;
@@ -83,10 +81,10 @@ local function FriendGroups_UpdateFriendButton(button)
 	button.buttonType = FriendButtons[index].buttonType;
 	button.id = FriendButtons[index].id;
 	local height = FRIENDS_BUTTON_HEIGHTS[button.buttonType];
-	local nameText, nameColor, infoText, broadcastText;
+	local nameText, nameColor, infoText, broadcastText, isFavoriteFriend;
 	local hasTravelPassButton = false;
 	if ( button.buttonType == FRIENDS_BUTTON_TYPE_WOW ) then
-		local info = C_FriendList.GetFriendInfo(FriendButtons[index].id); -- name, level, class, area, connected, status, note, isRaF, guid
+		local info = C_FriendList.GetFriendInfo(FriendButtons[index].id);
 		broadcastText = nil;
 		if ( info.connected ) then
 			button.background:SetColorTexture(FRIENDS_WOW_BACKGROUND_COLOR.r, FRIENDS_WOW_BACKGROUND_COLOR.g, FRIENDS_WOW_BACKGROUND_COLOR.b, FRIENDS_WOW_BACKGROUND_COLOR.a);
@@ -110,14 +108,15 @@ local function FriendGroups_UpdateFriendButton(button)
 			nameText = name;
 			nameColor = FRIENDS_GRAY_COLOR;
 		end
-		infoText = area;
+		infoText = info.mobile and LOCATION_MOBILE_APP or info.area;
 		button.gameIcon:Hide();
 		button.summonButton:ClearAllPoints();
 		button.summonButton:SetPoint("TOPRIGHT", button, "TOPRIGHT", 1, -1);
 		FriendsFrame_SummonButton_Update(button.summonButton);
 	elseif ( button.buttonType == FRIENDS_BUTTON_TYPE_BNET ) then
-		local bnetIDAccount, accountName, battleTag, isBattleTag, characterName, bnetIDGameAccount, client, isOnline, lastOnline, isBnetAFK, isBnetDND, messageText, noteText, isRIDFriend, messageTime, canSoR = BNGetFriendInfo(FriendButtons[index].id);
+		local bnetIDAccount, accountName, battleTag, isBattleTag, characterName, bnetIDGameAccount, client, isOnline, lastOnline, isBnetAFK, isBnetDND, messageText, noteText, isRIDFriend, messageTime, wowProjectID, isReferAFriend, canSummonFriend, isFavorite, mobile = BNGetFriendInfo(FriendButtons[index].id);
 		broadcastText = messageText;
+		isFavoriteFriend = isFavorite;
 		-- set up player name and character name
 		local characterName = characterName;
 		if ( accountName ) then
@@ -153,7 +152,7 @@ local function FriendGroups_UpdateFriendButton(button)
 		end
 
 		if ( isOnline ) then
-			local _, _, _, realmName, realmID, faction, _, _, _, zoneName, _, gameText, _, _, _, _, _, isGameAFK, isGameBusy, guid = BNGetGameAccountInfo(bnetIDGameAccount);
+			local _, _, _, realmName, realmID, faction, _, _, _, zoneName, _, gameText, _, _, _, _, _, isGameAFK, isGameBusy, guid, wowProjectID, mobile = BNGetGameAccountInfo(bnetIDGameAccount);
 			button.background:SetColorTexture(FRIENDS_BNET_BACKGROUND_COLOR.r, FRIENDS_BNET_BACKGROUND_COLOR.g, FRIENDS_BNET_BACKGROUND_COLOR.b, FRIENDS_BNET_BACKGROUND_COLOR.a);
 			if ( isBnetAFK or isGameAFK ) then
 				button.status:SetTexture(FRIENDS_TEXTURE_AFK);
@@ -162,11 +161,11 @@ local function FriendGroups_UpdateFriendButton(button)
 			else
 				button.status:SetTexture(FRIENDS_TEXTURE_ONLINE);
 			end
-			if ( client == BNET_CLIENT_WOW ) then
+			if ( client == BNET_CLIENT_WOW and wowProjectID == WOW_PROJECT_ID ) then
 				if ( not zoneName or zoneName == "" ) then
 					infoText = UNKNOWN;
 				else
-					infoText = zoneName;
+					infoText = mobile and LOCATION_MOBILE_APP or zoneName;
 				end
 			else
 				infoText = gameText;
@@ -181,7 +180,6 @@ local function FriendGroups_UpdateFriendButton(button)
 
 			-- travel pass
 			hasTravelPassButton = true;
-			print(select(5,BNGetFriendInfo(button.id)),FriendsFrame_GetInviteRestriction(button.id),restriction == INVITE_RESTRICTION_NONE)
 			local restriction = FriendsFrame_GetInviteRestriction(button.id);
 			if ( restriction == INVITE_RESTRICTION_NONE ) then
 				button.travelPassButton:Enable();
@@ -283,6 +281,13 @@ local function FriendGroups_UpdateFriendButton(button)
 		button.name:SetTextColor(nameColor.r, nameColor.g, nameColor.b);
 		button.info:SetText(infoText);
 		button:Show();
+		if (isFavoriteFriend) then
+			button.Favorite:Show();
+			button.Favorite:ClearAllPoints()
+			button.Favorite:SetPoint("TOPLEFT", button.name, "TOPLEFT", button.name:GetStringWidth(), 0);
+		else
+			button.Favorite:Hide();
+		end
 	else
 		button:Hide();
 	end
@@ -400,9 +405,11 @@ local function IncrementGroup(group, online)
 end
 
 local function FriendGroups_Update(forceUpdate)
-	local numBNetTotal, numBNetOnline = BNGetNumFriends();
+	local numBNetTotal, numBNetOnline, numBNetFavorite, numBNetFavoriteOnline = BNGetNumFriends();
 	local numBNetOffline = numBNetTotal - numBNetOnline;
-	local numWoWTotal, numWoWOnline = GetNumFriends();
+	local numBNetFavoriteOffline = numBNetFavorite - numBNetFavoriteOnline;
+	local numWoWTotal = C_FriendList.GetNumFriends();
+	local numWoWOnline = C_FriendList.GetNumOnlineFriends();
 	local numWoWOffline = numWoWTotal - numWoWOnline;
 
 	QuickJoinToastButton:UpdateDisplayedFriendCount();
@@ -451,6 +458,16 @@ local function FriendGroups_Update(forceUpdate)
 			end
 		end
 	end
+	local bnetFriendIndex = 0;
+	-- favorite friends, online and offline
+	for i = 1, numBNetFavorite do
+		bnetFriendIndex = bnetFriendIndex + 1;
+		AddButtonInfo(FRIENDS_BUTTON_TYPE_BNET, bnetFriendIndex);
+	end
+	if (numBNetFavorite > 0) then
+		AddButtonInfo(FRIENDS_BUTTON_TYPE_DIVIDER, nil);
+	end
+
 	-- online Battlenet friends
 	for i = 1, numBNetOnline do
 		if not BnetFriendGroups[i] then
@@ -525,12 +542,12 @@ local function FriendGroups_Update(forceUpdate)
             FriendButtons[i] = {}
         end
     end
-    
+
     for group in pairs(GroupTotal) do
         table.insert(GroupSorted, group)
     end
     table.sort(GroupSorted)
-    
+
     if GroupSorted[1] == "" then
         table.remove(GroupSorted, 1)
         table.insert(GroupSorted, "")
@@ -644,7 +661,7 @@ local function FriendGroups_OnClick(self, button)
         hooks["FriendsFrameFriendButton_OnClick"](self, button)
         return
     end
-    
+
     local group = self.info:GetText() or ""
     if button == "RightButton" then
         ToggleDropDownMenu(1, group, FriendGroups_Menu, "cursor", 0, 0)
@@ -665,7 +682,7 @@ local function FriendGroups_OnFriendMenuClick(self)
     if not self.value then
         return
     end
-	
+
     local add = strmatch(self.value, "FGROUPADD_(.+)")
     local del = strmatch(self.value, "FGROUPDEL_(.+)")
     local creating = self.value == "FRIEND_GROUP_NEW"
@@ -712,7 +729,7 @@ end
 -- hide the add/remove group buttons if we're not right clicking on a friendlist item
 local function FriendGroups_HideButtons()
     local dropdown = UIDROPDOWNMENU_INIT_MENU
-    
+
     local hidden = false
     for index, value in ipairs(UnitPopupMenus[UIDROPDOWNMENU_MENU_VALUE] or UnitPopupMenus[dropdown.which]) do
         if value == "FRIEND_GROUP_ADD" or value == "FRIEND_GROUP_DEL" or value == "FRIEND_GROUP_NEW" then
@@ -722,13 +739,13 @@ local function FriendGroups_HideButtons()
             end
         end
     end
-    
+
     if not hidden then
         wipe(UnitPopupMenus["FRIEND_GROUP_ADD"])
         wipe(UnitPopupMenus["FRIEND_GROUP_DEL"])
         local groups = {}
         local note = nil
-        
+
         if dropdown.bnetIDAccount then
             note = select(13, BNGetFriendInfoByID(dropdown.bnetIDAccount))
         else
@@ -740,9 +757,9 @@ local function FriendGroups_HideButtons()
                 end
             end
         end
-        
+
         NoteAndGroups(note, groups)
-        
+
         for _,group in ipairs(GroupSorted) do
             if group ~= "" and not groups[group] then
                 local faux = "FGROUPADD_" .. group
@@ -876,7 +893,7 @@ local menu_items = {
 		{ text = "Colour names", checked = function() return FriendGroups_SavedVars.colour_classes end, func = function() CloseDropDownMenus() FriendGroups_SavedVars.colour_classes = not FriendGroups_SavedVars.colour_classes FriendGroups_Update() end },
 	},
 }
- 
+
 FriendGroups_Menu.initialize = function(self, level)
 	if not menu_items[level] then return end
     for _, items in ipairs(menu_items[level]) do
@@ -915,20 +932,20 @@ frame:SetScript("OnEvent", function(self, event, ...)
 
         FriendsFrameFriendsScrollFrame.dynamic = FriendGroups_GetTopButton
         FriendsFrameFriendsScrollFrame.update = FriendGroups_UpdateFriends
-		
+
 		--add some more buttons
 		FriendsFrameFriendsScrollFrame.buttons[1]:SetHeight(FRIENDS_FRAME_FRIENDS_FRIENDS_HEIGHT)
 		HybridScrollFrame_CreateButtons(FriendsFrameFriendsScrollFrame, "FriendsFrameButtonTemplate")
-        
+
         table.remove(UnitPopupMenus["BN_FRIEND"], 5) --remove target option
-        
+
         --add our add/remove group buttons to the friend list popup menus
         for _,menu in ipairs(friend_popup_menus) do
 			table.insert(UnitPopupMenus[menu], #UnitPopupMenus[menu], "FRIEND_GROUP_NEW")
 			table.insert(UnitPopupMenus[menu], #UnitPopupMenus[menu], "FRIEND_GROUP_ADD")
             table.insert(UnitPopupMenus[menu], #UnitPopupMenus[menu], "FRIEND_GROUP_DEL")
         end
-        
+
         if not FriendGroups_SavedVars then
             FriendGroups_SavedVars = {
                 collapsed = {},

@@ -1,7 +1,9 @@
-## Interface: 70000
+
+## Interface: 80200
 ## Title: Friend Groups
 ## Author: frankkkkk
 ## Version: 1.0
+
 ## Notes: Addon managing your contact list with groups
 ## SavedVariables: FriendGroups_SavedVars
 

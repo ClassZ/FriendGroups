@@ -1,23 +1,26 @@
 local hooks = {}
 
 local function Hook(source, target, secure)
-    hooks[source] = _G[source]
-    if secure then
-        hooksecurefunc(source, target)
-    else
-        _G[source] = target
-    end
+	hooks[source] = _G[source]
+	if secure then
+		hooksecurefunc(source, target)
+	else
+		_G[source] = target
+	end
 end
 
 local FRIENDS_GROUP_NAME_COLOR = NORMAL_FONT_COLOR;
- 
+
 local INVITE_RESTRICTION_NO_GAME_ACCOUNTS = 0;
 local INVITE_RESTRICTION_CLIENT = 1;
 local INVITE_RESTRICTION_LEADER = 2;
 local INVITE_RESTRICTION_FACTION = 3;
 local INVITE_RESTRICTION_INFO = 4;
-local INVITE_RESTRICTION_REGION = 5;
-local INVITE_RESTRICTION_NONE = 6;
+local INVITE_RESTRICTION_WOW_PROJECT_ID = 5;
+local INVITE_RESTRICTION_WOW_PROJECT_MAINLINE = 6;
+local INVITE_RESTRICTION_WOW_PROJECT_CLASSIC = 7;
+local INVITE_RESTRICTION_NONE = 8;
+local INVITE_RESTRICTION_MOBILE = 9;
 
 local ONE_MINUTE = 60;
 local ONE_HOUR = 60 * ONE_MINUTE;
@@ -43,12 +46,12 @@ UnitPopupMenus["FRIEND_GROUP_DEL"] = { }
 
 local function ClassColourCode(class,table)
 	local initialClass = class
-    for k, v in pairs(LOCALIZED_CLASS_NAMES_FEMALE) do
-        if class == v then
-            class = k
-            break
-        end
-    end
+	for k, v in pairs(LOCALIZED_CLASS_NAMES_FEMALE) do
+		if class == v then
+			class = k
+			break
+		end
+	end
 	if class == initialClass then
 		for k, v in pairs(LOCALIZED_CLASS_NAMES_MALE) do
 			if class == v then
@@ -83,10 +86,10 @@ local function FriendGroups_UpdateFriendButton(button)
 	button.buttonType = FriendButtons[index].buttonType;
 	button.id = FriendButtons[index].id;
 	local height = FRIENDS_BUTTON_HEIGHTS[button.buttonType];
-	local nameText, nameColor, infoText, broadcastText;
+	local nameText, nameColor, infoText, broadcastText, isFavoriteFriend;
 	local hasTravelPassButton = false;
 	if ( button.buttonType == FRIENDS_BUTTON_TYPE_WOW ) then
-		local info = C_FriendList.GetFriendInfo(FriendButtons[index].id); -- name, level, class, area, connected, status, note, isRaF, guid
+		local info = C_FriendList.GetFriendInfo(FriendButtons[index].id);
 		broadcastText = nil;
 		if ( info.connected ) then
 			button.background:SetColorTexture(FRIENDS_WOW_BACKGROUND_COLOR.r, FRIENDS_WOW_BACKGROUND_COLOR.g, FRIENDS_WOW_BACKGROUND_COLOR.b, FRIENDS_WOW_BACKGROUND_COLOR.a);
@@ -110,14 +113,15 @@ local function FriendGroups_UpdateFriendButton(button)
 			nameText = name;
 			nameColor = FRIENDS_GRAY_COLOR;
 		end
-		infoText = area;
+		infoText = info.mobile and LOCATION_MOBILE_APP or info.area;
 		button.gameIcon:Hide();
 		button.summonButton:ClearAllPoints();
 		button.summonButton:SetPoint("TOPRIGHT", button, "TOPRIGHT", 1, -1);
 		FriendsFrame_SummonButton_Update(button.summonButton);
 	elseif ( button.buttonType == FRIENDS_BUTTON_TYPE_BNET ) then
-		local bnetIDAccount, accountName, battleTag, isBattleTag, characterName, bnetIDGameAccount, client, isOnline, lastOnline, isBnetAFK, isBnetDND, messageText, noteText, isRIDFriend, messageTime, canSoR = BNGetFriendInfo(FriendButtons[index].id);
+		local bnetIDAccount, accountName, battleTag, isBattleTag, characterName, bnetIDGameAccount, client, isOnline, lastOnline, isBnetAFK, isBnetDND, messageText, noteText, isRIDFriend, messageTime, wowProjectID, isReferAFriend, canSummonFriend, isFavorite, mobile = BNGetFriendInfo(FriendButtons[index].id);
 		broadcastText = messageText;
+		isFavoriteFriend = isFavorite;
 		-- set up player name and character name
 		local characterName = characterName;
 		if ( accountName ) then
@@ -153,7 +157,7 @@ local function FriendGroups_UpdateFriendButton(button)
 		end
 
 		if ( isOnline ) then
-			local _, _, _, realmName, realmID, faction, _, _, _, zoneName, _, gameText, _, _, _, _, _, isGameAFK, isGameBusy, guid = BNGetGameAccountInfo(bnetIDGameAccount);
+			local _, _, _, realmName, realmID, faction, _, _, _, zoneName, _, gameText, _, _, _, _, _, isGameAFK, isGameBusy, guid, wowProjectID, mobile = BNGetGameAccountInfo(bnetIDGameAccount);
 			button.background:SetColorTexture(FRIENDS_BNET_BACKGROUND_COLOR.r, FRIENDS_BNET_BACKGROUND_COLOR.g, FRIENDS_BNET_BACKGROUND_COLOR.b, FRIENDS_BNET_BACKGROUND_COLOR.a);
 			if ( isBnetAFK or isGameAFK ) then
 				button.status:SetTexture(FRIENDS_TEXTURE_AFK);
@@ -162,11 +166,11 @@ local function FriendGroups_UpdateFriendButton(button)
 			else
 				button.status:SetTexture(FRIENDS_TEXTURE_ONLINE);
 			end
-			if ( client == BNET_CLIENT_WOW ) then
+			if ( client == BNET_CLIENT_WOW and wowProjectID == WOW_PROJECT_ID ) then
 				if ( not zoneName or zoneName == "" ) then
 					infoText = UNKNOWN;
 				else
-					infoText = zoneName;
+					infoText = mobile and LOCATION_MOBILE_APP or zoneName;
 				end
 			else
 				infoText = gameText;
@@ -181,7 +185,6 @@ local function FriendGroups_UpdateFriendButton(button)
 
 			-- travel pass
 			hasTravelPassButton = true;
-			print(select(5,BNGetFriendInfo(button.id)),FriendsFrame_GetInviteRestriction(button.id),restriction == INVITE_RESTRICTION_NONE)
 			local restriction = FriendsFrame_GetInviteRestriction(button.id);
 			if ( restriction == INVITE_RESTRICTION_NONE ) then
 				button.travelPassButton:Enable();
@@ -211,7 +214,7 @@ local function FriendGroups_UpdateFriendButton(button)
 			title = group
 		end
 		button.text:SetText(title)
-        button.text:Show()
+		button.text:Show()
 
 		local counts = "(" .. GroupOnline[group] .. "/" .. GroupTotal[group] .. ")"
 		nameText = counts;
@@ -283,6 +286,13 @@ local function FriendGroups_UpdateFriendButton(button)
 		button.name:SetTextColor(nameColor.r, nameColor.g, nameColor.b);
 		button.info:SetText(infoText);
 		button:Show();
+		if (isFavoriteFriend) then
+			button.Favorite:Show();
+			button.Favorite:ClearAllPoints()
+			button.Favorite:SetPoint("TOPLEFT", button.name, "TOPLEFT", button.name:GetStringWidth(), 0);
+		else
+			button.Favorite:Hide();
+		end
 	else
 		button:Hide();
 	end
@@ -325,8 +335,8 @@ local function FriendGroups_UpdateFriends()
 	HybridScrollFrame_Update(scrollFrame, scrollFrame.totalFriendListEntriesHeight, usedHeight);
 
 	if hooks["FriendsFrame_UpdateFriends"] then
-        hooks["FriendsFrame_UpdateFriends"]()
-    end
+		hooks["FriendsFrame_UpdateFriends"]()
+	end
 
 	-- Delete unused groups in the collapsed part
 	for key,_ in pairs(FriendGroups_SavedVars.collapsed) do
@@ -337,72 +347,74 @@ local function FriendGroups_UpdateFriends()
 end
 
 local function FillGroups(groups, note, ...)
-    wipe(groups)
-    local n = select('#', ...)
-    for i = 1, n do
-        local v = select(i, ...)
-        v = strtrim(v)
-        groups[v] = true
-    end
-    if n == 0 then
-        groups[""] = true
-    end
-    return note
+	wipe(groups)
+	local n = select('#', ...)
+	for i = 1, n do
+		local v = select(i, ...)
+		v = strtrim(v)
+		groups[v] = true
+	end
+	if n == 0 then
+		groups[""] = true
+	end
+	return note
 end
 
 local function NoteAndGroups(note, groups)
-    if not note then
-        return FillGroups(groups, "")
-    end
-    if groups then
-        return FillGroups(groups, strsplit("#", note))
-    end
-    return strsplit("#", note)
+	if not note then
+		return FillGroups(groups, "")
+	end
+	if groups then
+		return FillGroups(groups, strsplit("#", note))
+	end
+	return strsplit("#", note)
 end
 
 local function CreateNote(note, groups)
-    local value = ""
-    if note then
-        value = note
-    end
-    for group in pairs(groups) do
-        value = value .. "#" .. group
-    end
-    return value
+	local value = ""
+	if note then
+		value = note
+	end
+	for group in pairs(groups) do
+		value = value .. "#" .. group
+	end
+	return value
 end
 
 local function AddGroup(note, group)
-    local groups = {}
-    note = NoteAndGroups(note, groups)
-    groups[""] = nil --ew
-    groups[group] = true
-    return CreateNote(note, groups)
+	local groups = {}
+	note = NoteAndGroups(note, groups)
+	groups[""] = nil --ew
+	groups[group] = true
+	return CreateNote(note, groups)
 end
 
 local function RemoveGroup(note, group)
-    local groups = {}
-    note = NoteAndGroups(note, groups)
-    groups[""] = nil --ew
-    groups[group] = nil
-    return CreateNote(note, groups)
+	local groups = {}
+	note = NoteAndGroups(note, groups)
+	groups[""] = nil --ew
+	groups[group] = nil
+	return CreateNote(note, groups)
 end
 
 local function IncrementGroup(group, online)
-    if not GroupTotal[group] then
-        GroupCount = GroupCount + 1
-        GroupTotal[group] = 0
-        GroupOnline[group] = 0
-    end
-    GroupTotal[group] = GroupTotal[group] + 1
-    if online then
-        GroupOnline[group] = GroupOnline[group] + 1
-    end
+	if not GroupTotal[group] then
+		GroupCount = GroupCount + 1
+		GroupTotal[group] = 0
+		GroupOnline[group] = 0
+	end
+	GroupTotal[group] = GroupTotal[group] + 1
+	if online then
+		GroupOnline[group] = GroupOnline[group] + 1
+	end
 end
 
 local function FriendGroups_Update(forceUpdate)
-	local numBNetTotal, numBNetOnline = BNGetNumFriends();
+	local numBNetTotal, numBNetOnline, numBNetFavorite, numBNetFavoriteOnline = BNGetNumFriends();
 	local numBNetOffline = numBNetTotal - numBNetOnline;
-	local numWoWTotal, numWoWOnline = GetNumFriends();
+	local numBNetFavoriteOffline = numBNetFavorite - numBNetFavoriteOnline;
+	local numWoWTotal = C_FriendList.GetNumFriends();
+	local numWoWOnline = C_FriendList.GetNumOnlineFriends();
 	local numWoWOffline = numWoWTotal - numWoWOnline;
 
 	QuickJoinToastButton:UpdateDisplayedFriendCount();
@@ -411,16 +423,16 @@ local function FriendGroups_Update(forceUpdate)
 	end
 
 	wipe(FriendButtons)
-    wipe(GroupTotal)
-    wipe(GroupOnline)
-    wipe(GroupSorted)
-    GroupCount = 0
+	wipe(GroupTotal)
+	wipe(GroupOnline)
+	wipe(GroupSorted)
+	GroupCount = 0
 
 	local BnetFriendGroups = {}
-    local WowFriendGroups = {}
+	local WowFriendGroups = {}
 	local FriendReqGroup = {}
 
-    local buttonCount = 0
+	local buttonCount = 0
 
 	FriendButtons.count = 0;
 	local addButtonIndex = 0;
@@ -451,90 +463,124 @@ local function FriendGroups_Update(forceUpdate)
 			end
 		end
 	end
-	-- online Battlenet friends
-	for i = 1, numBNetOnline do
+
+	-- favorite friends online
+	for i = 1, numBNetFavoriteOnline do
 		if not BnetFriendGroups[i] then
-            BnetFriendGroups[i] = {}
-        end
+			BnetFriendGroups[i] = {}
+		end
 		local noteText = select(13,BNGetFriendInfo(i))
 		NoteAndGroups(noteText, BnetFriendGroups[i])
 		for group in pairs(BnetFriendGroups[i]) do
-            IncrementGroup(group, true)
+			IncrementGroup(group, true)
 			 if not FriendGroups_SavedVars.collapsed[group] then
-                buttonCount = buttonCount + 1
+				buttonCount = buttonCount + 1
 				AddButtonInfo(FRIENDS_BUTTON_TYPE_BNET, i);
-            end
+			end
+		end
+	end
+	--favorite friends offline
+	for i = 1, numBNetFavoriteOffline do
+		local j = i + numBNetFavoriteOnline
+		if not BnetFriendGroups[j] then
+			BnetFriendGroups[j] = {}
+		end
+		local noteText = select(13,BNGetFriendInfo(j))
+		NoteAndGroups(noteText, BnetFriendGroups[j])
+		for group in pairs(BnetFriendGroups[j]) do
+			IncrementGroup(group, true)
+			 if not FriendGroups_SavedVars.collapsed[group] and not FriendGroups_SavedVars.hide_offline then
+				buttonCount = buttonCount + 1
+				AddButtonInfo(FRIENDS_BUTTON_TYPE_BNET, j);
+			end
+		end
+	end
+
+	-- online Battlenet friends
+	for i = 1, numBNetOnline do
+		local j = i + numBNetFavorite
+		if not BnetFriendGroups[j] then
+			BnetFriendGroups[j] = {}
+		end
+		local noteText = select(13,BNGetFriendInfo(j))
+		NoteAndGroups(noteText, BnetFriendGroups[j])
+		for group in pairs(BnetFriendGroups[j]) do
+			IncrementGroup(group, true)
+			 if not FriendGroups_SavedVars.collapsed[group] then
+				buttonCount = buttonCount + 1
+				AddButtonInfo(FRIENDS_BUTTON_TYPE_BNET, j);
+			end
 		end
 	end
 	-- online WoW friends
 	for i = 1, numWoWOnline do
 		if not WowFriendGroups[i] then
-            WowFriendGroups[i] = {}
-        end
-        local note = select(7,GetFriendInfo(i))
-        NoteAndGroups(note, WowFriendGroups[i])
-        for group in pairs(WowFriendGroups[i]) do
-            IncrementGroup(group, true)
-            if not FriendGroups_SavedVars.collapsed[group] then
-                buttonCount = buttonCount + 1
+			WowFriendGroups[i] = {}
+		end
+		local note = select(7,GetFriendInfo(i))
+		NoteAndGroups(note, WowFriendGroups[i])
+		for group in pairs(WowFriendGroups[i]) do
+			IncrementGroup(group, true)
+			if not FriendGroups_SavedVars.collapsed[group] then
+				buttonCount = buttonCount + 1
 				AddButtonInfo(FRIENDS_BUTTON_TYPE_WOW, i);
-            end
-        end
+			end
+		end
 	end
 	-- offline Battlenet friends
 	for i = 1, numBNetOffline do
 		local j = i + numBNetOnline
 		if not BnetFriendGroups[j] then
-            BnetFriendGroups[j] = {}
-        end
+			BnetFriendGroups[j] = {}
+		end
 		local noteText = select(13,BNGetFriendInfo(j))
 		NoteAndGroups(noteText, BnetFriendGroups[j])
 		for group in pairs(BnetFriendGroups[j]) do
-            IncrementGroup(group)
+			IncrementGroup(group)
 			 if not FriendGroups_SavedVars.collapsed[group] and not FriendGroups_SavedVars.hide_offline then
-                buttonCount = buttonCount + 1
+				buttonCount = buttonCount + 1
 				AddButtonInfo(FRIENDS_BUTTON_TYPE_BNET, j);
-            end
+			end
 		end
 	end
 	-- offline WoW friends
 	for i = 1, numWoWOffline do
 		local j = i + numWoWOnline
 		if not WowFriendGroups[j] then
-            WowFriendGroups[j] = {}
-        end
-        local note = select(7,GetFriendInfo(j))
-        NoteAndGroups(note, WowFriendGroups[j])
-        for group in pairs(WowFriendGroups[j]) do
-            IncrementGroup(group)
-            if not FriendGroups_SavedVars.collapsed[group] and not FriendGroups_SavedVars.hide_offline then
-                buttonCount = buttonCount + 1
+			WowFriendGroups[j] = {}
+		end
+		local note = select(7,GetFriendInfo(j))
+		NoteAndGroups(note, WowFriendGroups[j])
+		for group in pairs(WowFriendGroups[j]) do
+			IncrementGroup(group)
+			if not FriendGroups_SavedVars.collapsed[group] and not FriendGroups_SavedVars.hide_offline then
+				buttonCount = buttonCount + 1
 				AddButtonInfo(FRIENDS_BUTTON_TYPE_WOW, j);
-            end
-        end
+			end
+		end
 	end
 
 	buttonCount = buttonCount + GroupCount
-    totalScrollHeight = totalButtonHeight + GroupCount * FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_DIVIDER]
+	totalScrollHeight = totalButtonHeight + GroupCount * FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_DIVIDER]
 
 	FriendsFrameFriendsScrollFrame.totalFriendListEntriesHeight = totalScrollHeight;
 	FriendsFrameFriendsScrollFrame.numFriendListEntries = addButtonIndex;
 
 	if buttonCount > #FriendButtons then
-        for i = #FriendButtons + 1, buttonCount do
-            FriendButtons[i] = {}
-        end
-    end
-    
-    for group in pairs(GroupTotal) do
-        table.insert(GroupSorted, group)
-    end
-    table.sort(GroupSorted)
-    
-    if GroupSorted[1] == "" then
-        table.remove(GroupSorted, 1)
-        table.insert(GroupSorted, "")
-    end
+		for i = #FriendButtons + 1, buttonCount do
+			FriendButtons[i] = {}
+		end
+	end
+
+	for group in pairs(GroupTotal) do
+		table.insert(GroupSorted, group)
+	end
+	table.sort(GroupSorted)
+
+	if GroupSorted[1] == "" then
+		table.remove(GroupSorted, 1)
+		table.insert(GroupSorted, "")
+	end
 
 	for key,val in pairs(GroupSorted) do
 		if val == FriendRequestString then
@@ -543,12 +589,12 @@ local function FriendGroups_Update(forceUpdate)
 		end
 	end
 
-    local index = 0
-    for _,group in ipairs(GroupSorted) do
-        index = index + 1
-        FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_DIVIDER
-        FriendButtons[index].text = group
-        if not FriendGroups_SavedVars.collapsed[group] then
+	local index = 0
+	for _,group in ipairs(GroupSorted) do
+		index = index + 1
+		FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_DIVIDER
+		FriendButtons[index].text = group
+		if not FriendGroups_SavedVars.collapsed[group] then
 			for i = 1, #FriendReqGroup do
 				if group == FriendRequestString then
 					index = index + 1
@@ -556,39 +602,53 @@ local function FriendGroups_Update(forceUpdate)
 					FriendButtons[index].id = i
 				end
 			end
-            for i = 1, numBNetOnline do
-                if BnetFriendGroups[i][group] then
-                    index = index + 1
-                    FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_BNET
-                    FriendButtons[index].id = i
-                end
-            end
-            for i = 1, numWoWOnline do
-                if WowFriendGroups[i][group] then
-                    index = index + 1
-                    FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_WOW
-                    FriendButtons[index].id = i
-                end
-            end
-            if not FriendGroups_SavedVars.hide_offline then
-                for i = numBNetOnline + 1, numBNetTotal do
-                    if BnetFriendGroups[i][group] then
-                        index = index + 1
-                        FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_BNET
-                        FriendButtons[index].id = i
-                    end
-                end
-                for i = numWoWOnline + 1, numWoWTotal do
-                    if WowFriendGroups[i][group] then
-                        index = index + 1
-                        FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_WOW
-                        FriendButtons[index].id = i
-                    end
-                end
-            end
-        end
-    end
-    FriendButtons.count = index
+			for i = 1, numBNetFavoriteOnline do
+				if BnetFriendGroups[i][group] then
+					index = index + 1
+					FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_BNET
+					FriendButtons[index].id = i
+				end
+			end
+			for i = numBNetFavorite + 1, numBNetOnline do
+				if BnetFriendGroups[i][group] then
+					index = index + 1
+					FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_BNET
+					FriendButtons[index].id = i
+				end
+			end
+			for i = 1, numWoWOnline do
+				if WowFriendGroups[i][group] then
+					index = index + 1
+					FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_WOW
+					FriendButtons[index].id = i
+				end
+			end
+			if not FriendGroups_SavedVars.hide_offline then
+				for i = numBNetFavoriteOnline + 1, numBNetFavorite do
+					if BnetFriendGroups[i][group] then
+						index = index + 1
+						FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_BNET
+						FriendButtons[index].id = i
+					end
+				end
+				for i = numBNetOnline + 1 + numBNetFavorite, numBNetTotal do
+					if BnetFriendGroups[i][group] then
+						index = index + 1
+						FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_BNET
+						FriendButtons[index].id = i
+					end
+				end
+				for i = numWoWOnline + 1, numWoWTotal do
+					if WowFriendGroups[i][group] then
+						index = index + 1
+						FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_WOW
+						FriendButtons[index].id = i
+					end
+				end
+			end
+		end
+	end
+	FriendButtons.count = index
 
 	-- selection
 	local selectedFriend = 0;
@@ -640,18 +700,18 @@ local function FriendGroups_Update(forceUpdate)
 end
 
 local function FriendGroups_OnClick(self, button)
-    if not self.text:IsShown() then
-        hooks["FriendsFrameFriendButton_OnClick"](self, button)
-        return
-    end
-    
-    local group = self.info:GetText() or ""
-    if button == "RightButton" then
-        ToggleDropDownMenu(1, group, FriendGroups_Menu, "cursor", 0, 0)
-    else
-        FriendGroups_SavedVars.collapsed[group] = not FriendGroups_SavedVars.collapsed[group]
-        FriendGroups_Update()
-    end
+	if not self.text:IsShown() then
+		hooks["FriendsFrameFriendButton_OnClick"](self, button)
+		return
+	end
+
+	local group = self.info:GetText() or ""
+	if button == "RightButton" then
+		ToggleDropDownMenu(1, group, FriendGroups_Menu, "cursor", 0, 0)
+	else
+		FriendGroups_SavedVars.collapsed[group] = not FriendGroups_SavedVars.collapsed[group]
+		FriendGroups_Update()
+	end
 end
 
 local function FriendGroups_SaveOpenMenu()
@@ -662,177 +722,177 @@ end
 
 -- when one of our new menu items is clicked
 local function FriendGroups_OnFriendMenuClick(self)
-    if not self.value then
-        return
-    end
-	
-    local add = strmatch(self.value, "FGROUPADD_(.+)")
-    local del = strmatch(self.value, "FGROUPDEL_(.+)")
-    local creating = self.value == "FRIEND_GROUP_NEW"
+	if not self.value then
+		return
+	end
 
-    if add or del or creating then
-        local dropdown = UIDROPDOWNMENU_INIT_MENU
-        local source = OPEN_DROPDOWNMENUS_SAVE[1] and OPEN_DROPDOWNMENUS_SAVE[1].which or self.owner -- OPEN_DROPDOWNMENUS is nil on click
+	local add = strmatch(self.value, "FGROUPADD_(.+)")
+	local del = strmatch(self.value, "FGROUPDEL_(.+)")
+	local creating = self.value == "FRIEND_GROUP_NEW"
 
-        if source == "BN_FRIEND" or source == "BN_FRIEND_OFFLINE" then
+	if add or del or creating then
+		local dropdown = UIDROPDOWNMENU_INIT_MENU
+		local source = OPEN_DROPDOWNMENUS_SAVE[1] and OPEN_DROPDOWNMENUS_SAVE[1].which or self.owner -- OPEN_DROPDOWNMENUS is nil on click
+
+		if source == "BN_FRIEND" or source == "BN_FRIEND_OFFLINE" then
 			local note = select(13, BNGetFriendInfoByID(dropdown.bnetIDAccount))
 			if creating then
 				StaticPopup_Show("FRIEND_GROUP_CREATE", nil, nil, { id = dropdown.bnetIDAccount, note = note, set = BNSetFriendNote })
 			else
 				if add then
 					note = AddGroup(note, add)
-                else
-                    note = RemoveGroup(note, del)
+				else
+					note = RemoveGroup(note, del)
 				end
 				BNSetFriendNote(dropdown.bnetIDAccount, note)
 			end
-        elseif source == "FRIEND" or source == "FRIEND_OFFLINE" then
-            for i = 1, GetNumFriends() do
-                local name, _, _, _, _, _, note = GetFriendInfo(i)
-                if dropdown.name and name:find(dropdown.name) then
+		elseif source == "FRIEND" or source == "FRIEND_OFFLINE" then
+			for i = 1, GetNumFriends() do
+				local name, _, _, _, _, _, note = GetFriendInfo(i)
+				if dropdown.name and name:find(dropdown.name) then
 					if creating then
 						StaticPopup_Show("FRIEND_GROUP_CREATE", nil, nil, { id = i, note = note, set = SetFriendNotes })
 					else
 						if add then
 							note = AddGroup(note, add)
-                        else
-                            note = RemoveGroup(note, del)
-                        end
+						else
+							note = RemoveGroup(note, del)
+						end
 						SetFriendNotes(i, note)
 					end
-                    break
-                end
-            end
-        end
-        FriendGroups_Update()
-    end
-    HideDropDownMenu(1)
+					break
+				end
+			end
+		end
+		FriendGroups_Update()
+	end
+	HideDropDownMenu(1)
 end
 
 -- hide the add/remove group buttons if we're not right clicking on a friendlist item
 local function FriendGroups_HideButtons()
-    local dropdown = UIDROPDOWNMENU_INIT_MENU
-    
-    local hidden = false
-    for index, value in ipairs(UnitPopupMenus[UIDROPDOWNMENU_MENU_VALUE] or UnitPopupMenus[dropdown.which]) do
-        if value == "FRIEND_GROUP_ADD" or value == "FRIEND_GROUP_DEL" or value == "FRIEND_GROUP_NEW" then
-            if not dropdown.friendsList then
-                UnitPopupShown[UIDROPDOWNMENU_MENU_LEVEL][index] = 0
-                hidden = true
-            end
-        end
-    end
-    
-    if not hidden then
-        wipe(UnitPopupMenus["FRIEND_GROUP_ADD"])
-        wipe(UnitPopupMenus["FRIEND_GROUP_DEL"])
-        local groups = {}
-        local note = nil
-        
-        if dropdown.bnetIDAccount then
-            note = select(13, BNGetFriendInfoByID(dropdown.bnetIDAccount))
-        else
-            for i = 1, GetNumFriends() do
-                local name, _, _, _, _, _, noteText = GetFriendInfo(i)
-                if dropdown.name and name:find(dropdown.name) then
-                    note = noteText
-                    break
-                end
-            end
-        end
-        
-        NoteAndGroups(note, groups)
-        
-        for _,group in ipairs(GroupSorted) do
-            if group ~= "" and not groups[group] then
-                local faux = "FGROUPADD_" .. group
-                --polluting the popup buttons list
-                UnitPopupButtons[faux] = { text = group}
-                table.insert(UnitPopupMenus["FRIEND_GROUP_ADD"], faux)
-            end
-        end
-        for group in pairs(groups) do
-            if group ~= "" then
-                local faux = "FGROUPDEL_" .. group
-                UnitPopupButtons[faux] = { text = group}
-                table.insert(UnitPopupMenus["FRIEND_GROUP_DEL"], faux)
-            end
-        end
-    end
+	local dropdown = UIDROPDOWNMENU_INIT_MENU
+
+	local hidden = false
+	for index, value in ipairs(UnitPopupMenus[UIDROPDOWNMENU_MENU_VALUE] or UnitPopupMenus[dropdown.which]) do
+		if value == "FRIEND_GROUP_ADD" or value == "FRIEND_GROUP_DEL" or value == "FRIEND_GROUP_NEW" then
+			if not dropdown.friendsList then
+				UnitPopupShown[UIDROPDOWNMENU_MENU_LEVEL][index] = 0
+				hidden = true
+			end
+		end
+	end
+
+	if not hidden then
+		wipe(UnitPopupMenus["FRIEND_GROUP_ADD"])
+		wipe(UnitPopupMenus["FRIEND_GROUP_DEL"])
+		local groups = {}
+		local note = nil
+
+		if dropdown.bnetIDAccount then
+			note = select(13, BNGetFriendInfoByID(dropdown.bnetIDAccount))
+		else
+			for i = 1, GetNumFriends() do
+				local name, _, _, _, _, _, noteText = GetFriendInfo(i)
+				if dropdown.name and name:find(dropdown.name) then
+					note = noteText
+					break
+				end
+			end
+		end
+
+		NoteAndGroups(note, groups)
+
+		for _,group in ipairs(GroupSorted) do
+			if group ~= "" and not groups[group] then
+				local faux = "FGROUPADD_" .. group
+				--polluting the popup buttons list
+				UnitPopupButtons[faux] = { text = group}
+				table.insert(UnitPopupMenus["FRIEND_GROUP_ADD"], faux)
+			end
+		end
+		for group in pairs(groups) do
+			if group ~= "" then
+				local faux = "FGROUPDEL_" .. group
+				UnitPopupButtons[faux] = { text = group}
+				table.insert(UnitPopupMenus["FRIEND_GROUP_DEL"], faux)
+			end
+		end
+	end
 end
 
 local function FriendGroups_Rename(self, old)
-    local input = self.editBox:GetText()
-    if input == "" then
-        return
-    end
-    local groups = {}
-    for i = 1, BNGetNumFriends() do
-        local presenceID, _, _, _, _, _, _, _, _, _, _, _, noteText = BNGetFriendInfo(i)
-        local note = NoteAndGroups(noteText, groups)
-        if groups[old] then
-            groups[old] = nil
-            groups[input] = true
-            note = CreateNote(note, groups)
-            BNSetFriendNote(presenceID, note)
-        end
-    end
-    for i = 1, GetNumFriends() do
-        local note = select(7, GetFriendInfo(i))
-        note = NoteAndGroups(note, groups)
-        if groups[old] then
-            groups[old] = nil
-            groups[input] = true
-            note = CreateNote(note, groups)
-            SetFriendNotes(i, note)
-        end
-    end
-    FriendGroups_Update()
+	local input = self.editBox:GetText()
+	if input == "" then
+		return
+	end
+	local groups = {}
+	for i = 1, BNGetNumFriends() do
+		local presenceID, _, _, _, _, _, _, _, _, _, _, _, noteText = BNGetFriendInfo(i)
+		local note = NoteAndGroups(noteText, groups)
+		if groups[old] then
+			groups[old] = nil
+			groups[input] = true
+			note = CreateNote(note, groups)
+			BNSetFriendNote(presenceID, note)
+		end
+	end
+	for i = 1, GetNumFriends() do
+		local note = select(7, GetFriendInfo(i))
+		note = NoteAndGroups(note, groups)
+		if groups[old] then
+			groups[old] = nil
+			groups[input] = true
+			note = CreateNote(note, groups)
+			SetFriendNotes(i, note)
+		end
+	end
+	FriendGroups_Update()
 end
 
 local function FriendGroups_Create(self, data)
-    local input = self.editBox:GetText()
-    if input == "" then
-        return
-    end
-    local note = AddGroup(data.note, input)
+	local input = self.editBox:GetText()
+	if input == "" then
+		return
+	end
+	local note = AddGroup(data.note, input)
 	data.set(data.id, note)
 end
 
 StaticPopupDialogs["FRIEND_GROUP_RENAME"] = {
-    text = "Enter new group name",
-    button1 = ACCEPT,
-    button2 = CANCEL,
-    hasEditBox = 1,
-    OnAccept = FriendGroups_Rename,
-    EditBoxOnEnterPressed = function(self)
-        local parent = self:GetParent()
-        FriendGroups_Rename(parent, parent.data)
-        parent:Hide()
-    end,
-    timeout = 0,
-    whileDead = 1,
-    hideOnEscape = 1
+	text = "Enter new group name",
+	button1 = ACCEPT,
+	button2 = CANCEL,
+	hasEditBox = 1,
+	OnAccept = FriendGroups_Rename,
+	EditBoxOnEnterPressed = function(self)
+		local parent = self:GetParent()
+		FriendGroups_Rename(parent, parent.data)
+		parent:Hide()
+	end,
+	timeout = 0,
+	whileDead = 1,
+	hideOnEscape = 1
 }
 
 StaticPopupDialogs["FRIEND_GROUP_CREATE"] = {
-    text = "Enter new group name",
-    button1 = ACCEPT,
-    button2 = CANCEL,
-    hasEditBox = 1,
-    OnAccept = FriendGroups_Create,
-    EditBoxOnEnterPressed = function(self)
-        local parent = self:GetParent()
-        FriendGroups_Create(parent, parent.data)
-        parent:Hide()
-    end,
-    timeout = 0,
-    whileDead = 1,
-    hideOnEscape = 1
+	text = "Enter new group name",
+	button1 = ACCEPT,
+	button2 = CANCEL,
+	hasEditBox = 1,
+	OnAccept = FriendGroups_Create,
+	EditBoxOnEnterPressed = function(self)
+		local parent = self:GetParent()
+		FriendGroups_Create(parent, parent.data)
+		parent:Hide()
+	end,
+	timeout = 0,
+	whileDead = 1,
+	hideOnEscape = 1
 }
 
 local function InviteOrGroup(clickedgroup, invite)
-    local groups = {}
+	local groups = {}
 	for i = 1, BNGetNumFriends() do
 		local presenceID, _, _, _, _, toonID, _, _, _, _, _, _, noteText = BNGetFriendInfo(i)
 		local note = NoteAndGroups(noteText, groups)
@@ -840,8 +900,8 @@ local function InviteOrGroup(clickedgroup, invite)
 			if invite and toonID then
 				BNInviteFriend(toonID)
 			elseif not invite then
-                groups[clickedgroup] = nil
-                note = CreateNote(note, groups)
+				groups[clickedgroup] = nil
+				note = CreateNote(note, groups)
 				BNSetFriendNote(presenceID, note)
 			end
 		end
@@ -853,8 +913,8 @@ local function InviteOrGroup(clickedgroup, invite)
 			if invite and connected then
 				InviteUnit(name)
 			elseif not invite then
-                groups[clickedgroup] = nil
-                note = CreateNote(note, groups)
+				groups[clickedgroup] = nil
+				note = CreateNote(note, groups)
 				SetFriendNotes(i, note)
 			end
 		end
@@ -864,7 +924,7 @@ end
 local FriendGroups_Menu = CreateFrame("Frame", "FriendGroups_Menu")
 FriendGroups_Menu.displayMode = "MENU"
 local menu_items = {
-    [1] = {
+	[1] = {
 		{ text = "", notCheckable = true, isTitle = true },
 		{ text = "Invite all to party", notCheckable = true, func = function(self, menu, clickedgroup) InviteOrGroup(clickedgroup, true) end },
 		{ text = "Rename group", notCheckable = true, func = function(self, menu, clickedgroup) StaticPopup_Show("FRIEND_GROUP_RENAME", nil, nil, clickedgroup) end },
@@ -876,10 +936,10 @@ local menu_items = {
 		{ text = "Colour names", checked = function() return FriendGroups_SavedVars.colour_classes end, func = function() CloseDropDownMenus() FriendGroups_SavedVars.colour_classes = not FriendGroups_SavedVars.colour_classes FriendGroups_Update() end },
 	},
 }
- 
+
 FriendGroups_Menu.initialize = function(self, level)
 	if not menu_items[level] then return end
-    for _, items in ipairs(menu_items[level]) do
+	for _, items in ipairs(menu_items[level]) do
 		local info = UIDropDownMenu_CreateInfo()
 		for prop, value in pairs(items) do
 			info[prop] = value ~= "" and value or UIDROPDOWNMENU_MENU_VALUE ~= "" and UIDROPDOWNMENU_MENU_VALUE or "[no group]"
@@ -894,17 +954,17 @@ local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_LOGIN")
 
 frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_LOGIN" then
-        Hook("FriendsList_Update", FriendGroups_Update, true)
-        --if other addons have hooked this, we should too
-        if not issecurevariable("FriendsFrame_UpdateFriends") then
-            Hook("FriendsFrame_UpdateFriends", FriendGroups_UpdateFriends)
-        end
-        Hook("FriendsFrameFriendButton_OnClick", FriendGroups_OnClick)
-        Hook("UnitPopup_ShowMenu", FriendGroups_SaveOpenMenu, true)
-        Hook("UnitPopup_OnClick", FriendGroups_OnFriendMenuClick, true)
-        Hook("UnitPopup_HideButtons", FriendGroups_HideButtons, true)
-        Hook("FriendsFrameTooltip_Show",function(button)
+	if event == "PLAYER_LOGIN" then
+		Hook("FriendsList_Update", FriendGroups_Update, true)
+		--if other addons have hooked this, we should too
+		if not issecurevariable("FriendsFrame_UpdateFriends") then
+			Hook("FriendsFrame_UpdateFriends", FriendGroups_UpdateFriends)
+		end
+		Hook("FriendsFrameFriendButton_OnClick", FriendGroups_OnClick)
+		Hook("UnitPopup_ShowMenu", FriendGroups_SaveOpenMenu, true)
+		Hook("UnitPopup_OnClick", FriendGroups_OnFriendMenuClick, true)
+		Hook("UnitPopup_HideButtons", FriendGroups_HideButtons, true)
+		Hook("FriendsFrameTooltip_Show",function(button)
 			if ( button.buttonType == FRIENDS_BUTTON_TYPE_DIVIDER ) then
 				if FriendsTooltip:IsShown() then
 					FriendsTooltip:Hide()
@@ -913,28 +973,28 @@ frame:SetScript("OnEvent", function(self, event, ...)
 			end
 		end,true)-- Fixes tooltip showing on groups
 
-        FriendsFrameFriendsScrollFrame.dynamic = FriendGroups_GetTopButton
-        FriendsFrameFriendsScrollFrame.update = FriendGroups_UpdateFriends
-		
+		FriendsFrameFriendsScrollFrame.dynamic = FriendGroups_GetTopButton
+		FriendsFrameFriendsScrollFrame.update = FriendGroups_UpdateFriends
+
 		--add some more buttons
 		FriendsFrameFriendsScrollFrame.buttons[1]:SetHeight(FRIENDS_FRAME_FRIENDS_FRIENDS_HEIGHT)
 		HybridScrollFrame_CreateButtons(FriendsFrameFriendsScrollFrame, "FriendsFrameButtonTemplate")
-        
-        table.remove(UnitPopupMenus["BN_FRIEND"], 5) --remove target option
-        
-        --add our add/remove group buttons to the friend list popup menus
-        for _,menu in ipairs(friend_popup_menus) do
+
+		table.remove(UnitPopupMenus["BN_FRIEND"], 5) --remove target option
+
+		--add our add/remove group buttons to the friend list popup menus
+		for _,menu in ipairs(friend_popup_menus) do
 			table.insert(UnitPopupMenus[menu], #UnitPopupMenus[menu], "FRIEND_GROUP_NEW")
 			table.insert(UnitPopupMenus[menu], #UnitPopupMenus[menu], "FRIEND_GROUP_ADD")
-            table.insert(UnitPopupMenus[menu], #UnitPopupMenus[menu], "FRIEND_GROUP_DEL")
-        end
-        
-        if not FriendGroups_SavedVars then
-            FriendGroups_SavedVars = {
-                collapsed = {},
-                hide_offline = false,
-                colour_classes = true,
-            }
-        end
-    end
+			table.insert(UnitPopupMenus[menu], #UnitPopupMenus[menu], "FRIEND_GROUP_DEL")
+		end
+
+		if not FriendGroups_SavedVars then
+			FriendGroups_SavedVars = {
+				collapsed = {},
+				hide_offline = false,
+				colour_classes = true,
+			}
+		end
+	end
 end)

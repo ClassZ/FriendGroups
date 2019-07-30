@@ -89,9 +89,9 @@ local function FriendGroups_UpdateFriendButton(button)
 	local nameText, nameColor, infoText, broadcastText, isFavoriteFriend;
 	local hasTravelPassButton = false;
 	if ( button.buttonType == FRIENDS_BUTTON_TYPE_WOW ) then
-		local info = C_FriendList.GetFriendInfo(FriendButtons[index].id);
+		local info = C_FriendList.GetFriendInfoByIndex(FriendButtons[index].id);
 		broadcastText = nil;
-		if ( info.connected ) then
+		if info.connected then
 			button.background:SetColorTexture(FRIENDS_WOW_BACKGROUND_COLOR.r, FRIENDS_WOW_BACKGROUND_COLOR.g, FRIENDS_WOW_BACKGROUND_COLOR.b, FRIENDS_WOW_BACKGROUND_COLOR.a);
 			if ( info.afk ) then
 				button.status:SetTexture(FRIENDS_TEXTURE_AFK);

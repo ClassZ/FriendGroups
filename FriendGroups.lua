@@ -444,7 +444,7 @@ local function FriendGroups_Update(forceUpdate)
 		end
 		FriendButtons[addButtonIndex].buttonType = buttonType;
 		FriendButtons[addButtonIndex].id = id;
-		FriendButtons.count = FriendButtons.count+1;
+		FriendButtons.count = FriendButtons.count + 1;
 		totalButtonHeight = totalButtonHeight + FRIENDS_BUTTON_HEIGHTS[buttonType];
 	end
 
@@ -456,7 +456,7 @@ local function FriendGroups_Update(forceUpdate)
 				FriendReqGroup[i] = {}
 			end
 			IncrementGroup(FriendRequestString,true)
-			NoteAndGroups(_, FriendReqGroup[i])
+			NoteAndGroups(nil, FriendReqGroup[i])
 			if not FriendGroups_SavedVars.collapsed[group] then
 				buttonCount = buttonCount + 1
 				AddButtonInfo(FRIENDS_BUTTON_TYPE_INVITE, i);

@@ -102,7 +102,7 @@ local function FriendGroups_UpdateFriendButton(button)
 			end
 
 			if FriendGroups_SavedVars.colour_classes then
-				nameColor = ClassColourCode(class,true);
+				nameColor = ClassColourCode(info.className, true);
 			else
 				nameColor = FRIENDS_WOW_NAME_COLOR;
 			end

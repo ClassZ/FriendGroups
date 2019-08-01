@@ -110,7 +110,7 @@ local function FriendGroups_UpdateFriendButton(button)
 		else
 			button.background:SetColorTexture(FRIENDS_OFFLINE_BACKGROUND_COLOR.r, FRIENDS_OFFLINE_BACKGROUND_COLOR.g, FRIENDS_OFFLINE_BACKGROUND_COLOR.b, FRIENDS_OFFLINE_BACKGROUND_COLOR.a);
 			button.status:SetTexture(FRIENDS_TEXTURE_OFFLINE);
-			nameText = name;
+			nameText = info.name;
 			nameColor = FRIENDS_GRAY_COLOR;
 		end
 		infoText = info.mobile and LOCATION_MOBILE_APP or info.area;

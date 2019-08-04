@@ -566,7 +566,8 @@ local function FriendGroups_Update(forceUpdate)
 	end
 
 	buttonCount = buttonCount + GroupCount
-	totalScrollHeight = totalButtonHeight + GroupCount * FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_DIVIDER]
+	-- 1.5 is a magic number which preventq the list scroll to be too long
+	totalScrollHeight = totalButtonHeight + GroupCount * FRIENDS_BUTTON_HEIGHTS[FRIENDS_BUTTON_TYPE_DIVIDER] / 1.5
 
 	FriendsFrameFriendsScrollFrame.totalFriendListEntriesHeight = totalScrollHeight
 	FriendsFrameFriendsScrollFrame.numFriendListEntries = addButtonIndex
@@ -693,7 +694,7 @@ local function FriendGroups_Update(forceUpdate)
 			end
 		end
 	end
-	if ( showRIDWarning ) then
+	if showRIDWarning then
 		FriendsListFrame.RIDWarning:Show()
 		FriendsFrameFriendsScrollFrame.scrollBar:Disable()
 		FriendsFrameFriendsScrollFrame.scrollUp:Disable()

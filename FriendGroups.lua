@@ -494,16 +494,15 @@ local function FriendGroups_Update(forceUpdate)
 		local noteText = select(13,BNGetFriendInfo(j))
 		NoteAndGroups(noteText, BnetFriendGroups[j])
 		for group in pairs(BnetFriendGroups[j]) do
-			IncrementGroup(group, true)
+			IncrementGroup(group)
 			 if not FriendGroups_SavedVars.collapsed[group] and not FriendGroups_SavedVars.hide_offline then
 				buttonCount = buttonCount + 1
 				AddButtonInfo(FRIENDS_BUTTON_TYPE_BNET, j)
 			end
 		end
 	end
-
 	-- online Battlenet friends
-	for i = 1, numBNetOnline do
+	for i = 1, numBNetOnline - numBNetFavoriteOnline do
 		local j = i + numBNetFavorite
 		if not BnetFriendGroups[j] then
 			BnetFriendGroups[j] = {}
@@ -534,8 +533,8 @@ local function FriendGroups_Update(forceUpdate)
 		end
 	end
 	-- offline Battlenet friends
-	for i = 1, numBNetOffline do
-		local j = i + numBNetOnline
+	for i = 1, numBNetOffline - numBNetFavoriteOffline do
+		local j = i + numBNetFavorite + numBNetOnline - numBNetFavoriteOnline
 		if not BnetFriendGroups[j] then
 			BnetFriendGroups[j] = {}
 		end
@@ -615,7 +614,7 @@ local function FriendGroups_Update(forceUpdate)
 					FriendButtons[index].id = i
 				end
 			end
-			for i = numBNetFavorite + 1, numBNetOnline do
+			for i = numBNetFavorite + 1, numBNetOnline + numBNetFavoriteOffline do
 				if BnetFriendGroups[i][group] then
 					index = index + 1
 					FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_BNET
@@ -637,7 +636,7 @@ local function FriendGroups_Update(forceUpdate)
 						FriendButtons[index].id = i
 					end
 				end
-				for i = numBNetOnline + 1 + numBNetFavorite, numBNetTotal do
+				for i = numBNetOnline + numBNetFavoriteOffline + 1, numBNetTotal do
 					if BnetFriendGroups[i][group] then
 						index = index + 1
 						FriendButtons[index].buttonType = FRIENDS_BUTTON_TYPE_BNET
@@ -659,15 +658,15 @@ local function FriendGroups_Update(forceUpdate)
 	-- selection
 	local selectedFriend = 0
 	-- check that we have at least 1 friend
-	if ( numBNetTotal + numWoWTotal > 0 ) then
+	if numBNetTotal + numWoWTotal > 0 then
 		-- get friend
-		if ( FriendsFrame.selectedFriendType == FRIENDS_BUTTON_TYPE_WOW ) then
+		if FriendsFrame.selectedFriendType == FRIENDS_BUTTON_TYPE_WOW then
 			selectedFriend = C_FriendList.GetSelectedFriend()
-		elseif ( FriendsFrame.selectedFriendType == FRIENDS_BUTTON_TYPE_BNET ) then
+		elseif FriendsFrame.selectedFriendType == FRIENDS_BUTTON_TYPE_BNET then
 			selectedFriend = BNGetSelectedFriend()
 		end
 		-- set to first in list if no friend
-		if ( not selectedFriend or selectedFriend == 0 ) then
+		if not selectedFriend or selectedFriend == 0 then
 			FriendsFrame_SelectFriend(FriendButtons[1].buttonType, 1)
 			selectedFriend = 1
 		end

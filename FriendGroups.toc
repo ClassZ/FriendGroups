@@ -2,7 +2,7 @@
 ## Interface: 80200
 ## Title: Friend Groups
 ## Author: Mikeprod
-## Version: 8.2_fix_3
+## Version: 8.2_fix_4
 
 ## Notes: Addon managing your contact list with groups
 ## SavedVariables: FriendGroups_SavedVars

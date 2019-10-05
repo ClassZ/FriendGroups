@@ -15,12 +15,28 @@ local INVITE_RESTRICTION_NO_GAME_ACCOUNTS = 0
 local INVITE_RESTRICTION_CLIENT = 1
 local INVITE_RESTRICTION_LEADER = 2
 local INVITE_RESTRICTION_FACTION = 3
-local INVITE_RESTRICTION_INFO = 4
-local INVITE_RESTRICTION_WOW_PROJECT_ID = 5
-local INVITE_RESTRICTION_WOW_PROJECT_MAINLINE = 6
-local INVITE_RESTRICTION_WOW_PROJECT_CLASSIC = 7
-local INVITE_RESTRICTION_NONE = 8
-local INVITE_RESTRICTION_MOBILE = 9
+local INVITE_RESTRICTION_REALM = 4
+local INVITE_RESTRICTION_INFO = 5
+local INVITE_RESTRICTION_WOW_PROJECT_ID = 6
+local INVITE_RESTRICTION_WOW_PROJECT_MAINLINE = 7
+local INVITE_RESTRICTION_WOW_PROJECT_CLASSIC = 8
+local INVITE_RESTRICTION_NONE = 9
+local INVITE_RESTRICTION_MOBILE = 10
+
+-- classic and retails use different values for restrictions
+if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+	INVITE_RESTRICTION_NO_GAME_ACCOUNTS = 0
+	INVITE_RESTRICTION_CLIENT = 1
+	INVITE_RESTRICTION_LEADER = 2
+	INVITE_RESTRICTION_FACTION = 3
+	INVITE_RESTRICTION_REALM = nil
+	INVITE_RESTRICTION_INFO = 4
+	INVITE_RESTRICTION_WOW_PROJECT_ID = 5
+	INVITE_RESTRICTION_WOW_PROJECT_MAINLINE = 6
+	INVITE_RESTRICTION_WOW_PROJECT_CLASSIC = 7
+	INVITE_RESTRICTION_NONE = 8
+	INVITE_RESTRICTION_MOBILE = 9
+end
 
 local ONE_MINUTE = 60
 local ONE_HOUR = 60 * ONE_MINUTE
@@ -73,10 +89,16 @@ local function ClassColourCode(class,table)
 			end
 		end
 	end
+	local colour = RAID_CLASS_COLORS[class]
+	-- Shaman color is incorrectly shared with pally in the table in classic
+	if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC and class == "SHAMAN" then
+		colour.r = 0
+		colour.g = 0.44
+		colour.b = 0.87
+	end
 	if table then
-		return RAID_CLASS_COLORS[class]
+		return colour
 	else
-		local colour = RAID_CLASS_COLORS[class]
 		return string.format("|cFF%02x%02x%02x", colour.r*255, colour.g*255, colour.b*255)
 	end
 end
@@ -115,13 +137,14 @@ local function GetFriendInfoById(id)
 	local accountName, characterName, class, level, isFavoriteFriend, isOnline, 
 		bnetAccountId, client, canCoop, wowProjectID, lastOnline,
 		isAFK, isGameAFK, isDND, isGameBusy, mobile, zoneName
+	local realmName
+
 	if C_BattleNet and C_BattleNet.GetFriendAccountInfo then
 		local accountInfo = C_BattleNet.GetFriendAccountInfo(id)
 		if accountInfo then
 			accountName = accountInfo.accountName
 			isFavoriteFriend = accountInfo.isFavorite
 			bnetAccountId = accountInfo.bnetAccountID
-			canCoop = CanCooperateWithGameAccount(accountInfo)
 			isAFK = accountInfo.isAFK
 			isGameAFK = accountInfo.isGameAFK
 			isDND = accountInfo.isDND
@@ -139,20 +162,37 @@ local function GetFriendInfoById(id)
 				level = gameAccountInfo.characterLevel
 				client = gameAccountInfo.clientProgram
 				wowProjectID = gameAccountInfo.wowProjectID
+				gameText = gameAccountInfo.richPresence
+				zoneName = gameAccountInfo.areaName
+				realmName = gameAccountInfo.realmName
 			end
+
+			canCoop = CanCooperateWithGameAccount(accountInfo)
 		end
 	else
-		bnetIDAccount, accountName, _, _, characterName, bnetIDGameAccount, client, 
+		bnetIDAccount, accountName, _, _, characterName, bnetAccountId, client, 
 		isOnline, lastOnline, isAFK, isDND, _, _, _, _, wowProjectID, _, _, 
 		isFavorite, mobile = BNGetFriendInfo(id)
+
+		if isOnline then
+			_, _, _, realmName, realmID, faction, _, class, _, zoneName, level, 
+			gameText, _, _, _, _, _, isGameAFK, isGameBusy, guid, 
+			wowProjectID, mobile = BNGetGameAccountInfo(bnetAccountId)
+		end
+
+		canCoop = CanCooperateWithGameAccount(bnetAccountId)
+	end
+
+	if realmName and realmName ~= "" then
+		zoneName = zoneName .. " - " .. realmName
 	end
 
 	return accountName, characterName, class, level, isFavoriteFriend, isOnline, 
 		bnetAccountId, client, canCoop, wowProjectID, lastOnline,
-		isAFK, isGameAFK, isDND, isGameBusy, mobile, zoneName
+		isAFK, isGameAFK, isDND, isGameBusy, mobile, zoneName, gameText
 end
 
-local function FriendGroups_GetBNetButtonNameText(accountName, characterName, class, level)
+local function FriendGroups_GetBNetButtonNameText(accountName, client, canCoop, characterName, class, level)
 	local nameText
 
 	-- set up player name and character name
@@ -219,7 +259,9 @@ local function FriendGroups_UpdateFriendButton(button)
 			else
 				nameText = info.name..", "..format(FRIENDS_LEVEL_TEMPLATE, info.level, info.className)
 			end
-			infoText = GetOnlineInfoText(BNET_CLIENT_WOW, info.mobile, info.rafLinkType, info.area)
+			if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+				infoText = GetOnlineInfoText(BNET_CLIENT_WOW, info.mobile, info.rafLinkType, info.area)
+			end
 		else
 			button.background:SetColorTexture(FRIENDS_OFFLINE_BACKGROUND_COLOR.r, FRIENDS_OFFLINE_BACKGROUND_COLOR.g, FRIENDS_OFFLINE_BACKGROUND_COLOR.b, FRIENDS_OFFLINE_BACKGROUND_COLOR.a)
 			button.status:SetTexture(FRIENDS_TEXTURE_OFFLINE)
@@ -236,9 +278,9 @@ local function FriendGroups_UpdateFriendButton(button)
 		local id = FriendButtons[index].id
 		local accountName, characterName, class, level, isFavoriteFriend, isOnline, 
 			bnetAccountId, client, canCoop, wowProjectID, lastOnline,
-			isAFK, isGameAFK, isDND, isGameBusy, mobile, zoneName = GetFriendInfoById(id)
+			isAFK, isGameAFK, isDND, isGameBusy, mobile, zoneName, gameText = GetFriendInfoById(id)
 
-		nameText = FriendGroups_GetBNetButtonNameText(accountName, characterName, class, level)
+		nameText = FriendGroups_GetBNetButtonNameText(accountName, client, canCoop, characterName, class, level)
 
 		if isOnline then
 			button.background:SetColorTexture(FRIENDS_BNET_BACKGROUND_COLOR.r, FRIENDS_BNET_BACKGROUND_COLOR.g, FRIENDS_BNET_BACKGROUND_COLOR.b, FRIENDS_BNET_BACKGROUND_COLOR.a)
@@ -307,11 +349,12 @@ local function FriendGroups_UpdateFriendButton(button)
 			button.text:SetText(title)
 			button.text:Show()
 			nameText = counts
+			button.name:SetJustifyH("RIGHT")
 		else
 			nameText = title.." - "..counts
+			button.name:SetJustifyH("CENTER")
 		end
 		nameColor = FRIENDS_GROUP_NAME_COLOR
-		button.name:SetJustifyH("RIGHT")
 
 		if FriendGroups_SavedVars.collapsed[group] then
 			button.status:SetTexture("Interface\\Buttons\\UI-PlusButton-UP")

@@ -50,7 +50,7 @@ local GroupTotal = {}
 local GroupOnline = {}
 local GroupSorted = {}
 
-local FriendRequestString = string.sub(FRIEND_REQUESTS,1,-5)
+local FriendRequestString = string.sub(FRIEND_REQUESTS,1,-6)
 
 local OPEN_DROPDOWNMENUS_SAVE = nil
 local friend_popup_menus = { "FRIEND", "FRIEND_OFFLINE", "BN_FRIEND", "BN_FRIEND_OFFLINE" }
@@ -204,20 +204,20 @@ local function FriendGroups_GetBNetButtonNameText(accountName, client, canCoop, 
 
 	-- append character name
 	if characterName then
-		local characterNameSuffix
-		if (not level) or (FriendGroups_SavedVars.hide_high_level and level == tostring(currentExpansionMaxLevel)) then
-			characterNameSuffix = ""
-		else
-			characterNameSuffix= "-"..level
-		end
-
 		local coopLabel = ""
 		if not canCoop then
 			coopLabel = CANNOT_COOPERATE_LABEL
 		end
+		local characterNameSuffix
+		if (not level) or (FriendGroups_SavedVars.hide_high_level and level == currentExpansionMaxLevel) then
+			characterNameSuffix = coopLabel
+		else
+			characterNameSuffix= "-"..level..coopLabel
+		end
+
 		if client == BNET_CLIENT_WOW then
 			local nameColor = FriendGroups_SavedVars.colour_classes and ClassColourCode(class) or FRIENDS_WOW_NAME_COLOR
-			nameText = nameText.." "..nameColor.."("..characterName..coopLabel..characterNameSuffix..")"..FONT_COLOR_CODE_CLOSE
+			nameText = nameText.." "..nameColor.."("..characterName..characterNameSuffix..")"..FONT_COLOR_CODE_CLOSE
 		else
 			if ENABLE_COLORBLIND_MODE == "1" then
 				characterName = characterName..coopLabel
@@ -351,7 +351,7 @@ local function FriendGroups_UpdateFriendButton(button)
 			nameText = counts
 			button.name:SetJustifyH("RIGHT")
 		else
-			nameText = title.." - "..counts
+			nameText = title.." "..counts
 			button.name:SetJustifyH("CENTER")
 		end
 		nameColor = FRIENDS_GROUP_NAME_COLOR

@@ -60,7 +60,7 @@ UnitPopupButtons["FRIEND_GROUP_DEL"] = { text = "Remove from group", nested = 1}
 UnitPopupMenus["FRIEND_GROUP_ADD"] = { }
 UnitPopupMenus["FRIEND_GROUP_DEL"] = { }
 
-local currentExpansionMaxLevel = 120 -- Make it dynamic somehow
+local currentExpansionMaxLevel = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE and 120 or 60 -- Make it dynamic somehow
 
 local FriendsScrollFrame
 local FriendButtonTemplate
@@ -73,7 +73,11 @@ else
 	FriendButtonTemplate = "FriendsFrameButtonTemplate"
 end
 
-local function ClassColourCode(class,table)
+local function ClassColourCode(class, canCooperate, returnTable)
+	if not canCooperate then
+		return returnTable and FRIENDS_GRAY_COLOR or string.format("|cFF%02x%02x%02x", FRIENDS_GRAY_COLOR.r*255, FRIENDS_GRAY_COLOR.g*255, FRIENDS_GRAY_COLOR.b*255)
+	end
+
 	local initialClass = class
 	for k, v in pairs(LOCALIZED_CLASS_NAMES_FEMALE) do
 		if class == v then
@@ -89,14 +93,14 @@ local function ClassColourCode(class,table)
 			end
 		end
 	end
-	local colour = RAID_CLASS_COLORS[class]
+	local colour = class ~= "" and RAID_CLASS_COLORS[class] or FRIENDS_GRAY_COLOR
 	-- Shaman color is incorrectly shared with pally in the table in classic
 	if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC and class == "SHAMAN" then
 		colour.r = 0
 		colour.g = 0.44
 		colour.b = 0.87
 	end
-	if table then
+	if returnTable then
 		return colour
 	else
 		return string.format("|cFF%02x%02x%02x", colour.r*255, colour.g*255, colour.b*255)
@@ -216,7 +220,7 @@ local function FriendGroups_GetBNetButtonNameText(accountName, client, canCoop, 
 		end
 
 		if client == BNET_CLIENT_WOW then
-			local nameColor = FriendGroups_SavedVars.colour_classes and ClassColourCode(class) or FRIENDS_WOW_NAME_COLOR
+			local nameColor = FriendGroups_SavedVars.colour_classes and ClassColourCode(class, canCoop)
 			nameText = nameText.." "..nameColor.."("..characterName..characterNameSuffix..")"..FONT_COLOR_CODE_CLOSE
 		else
 			if ENABLE_COLORBLIND_MODE == "1" then
@@ -249,11 +253,9 @@ local function FriendGroups_UpdateFriendButton(button)
 			else
 				button.status:SetTexture(FRIENDS_TEXTURE_ONLINE)
 			end
-			if FriendGroups_SavedVars.colour_classes then
-				nameColor = ClassColourCode(info.className, true)
-			else
-				nameColor = FRIENDS_WOW_NAME_COLOR
-			end
+
+			nameColor = FriendGroups_SavedVars.colour_classes and ClassColourCode(info.className, CanCooperateWithGameAccount(C_BattleNet.GetFriendAccountInfo(FriendButtons[index].id)), true) or FRIENDS_WOW_NAME_COLOR
+
 			if FriendGroups_SavedVars.hide_high_level and info.level == currentExpansionMaxLevel then
 				nameText = info.name..", "..info.className
 			else

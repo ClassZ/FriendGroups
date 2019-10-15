@@ -73,8 +73,8 @@ else
 	FriendButtonTemplate = "FriendsFrameButtonTemplate"
 end
 
-local function ClassColourCode(class, canCooperate, returnTable)
-	if not canCooperate then
+local function ClassColourCode(class, returnTable)
+	if not class then
 		return returnTable and FRIENDS_GRAY_COLOR or string.format("|cFF%02x%02x%02x", FRIENDS_GRAY_COLOR.r*255, FRIENDS_GRAY_COLOR.g*255, FRIENDS_GRAY_COLOR.b*255)
 	end
 
@@ -94,7 +94,7 @@ local function ClassColourCode(class, canCooperate, returnTable)
 		end
 	end
 	local colour = class ~= "" and RAID_CLASS_COLORS[class] or FRIENDS_GRAY_COLOR
-	-- Shaman color is incorrectly shared with pally in the table in classic
+	-- Shaman color is shared with pally in the table in classic
 	if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC and class == "SHAMAN" then
 		colour.r = 0
 		colour.g = 0.44
@@ -220,7 +220,7 @@ local function FriendGroups_GetBNetButtonNameText(accountName, client, canCoop, 
 		end
 
 		if client == BNET_CLIENT_WOW then
-			local nameColor = FriendGroups_SavedVars.colour_classes and ClassColourCode(class, canCoop)
+			local nameColor = FriendGroups_SavedVars.colour_classes and ClassColourCode(class)
 			nameText = nameText.." "..nameColor.."("..characterName..characterNameSuffix..")"..FONT_COLOR_CODE_CLOSE
 		else
 			if ENABLE_COLORBLIND_MODE == "1" then
@@ -254,7 +254,7 @@ local function FriendGroups_UpdateFriendButton(button)
 				button.status:SetTexture(FRIENDS_TEXTURE_ONLINE)
 			end
 
-			nameColor = FriendGroups_SavedVars.colour_classes and ClassColourCode(info.className, CanCooperateWithGameAccount(C_BattleNet.GetFriendAccountInfo(FriendButtons[index].id)), true) or FRIENDS_WOW_NAME_COLOR
+			nameColor = FriendGroups_SavedVars.colour_classes and ClassColourCode(info.className, true) or FRIENDS_WOW_NAME_COLOR
 
 			if FriendGroups_SavedVars.hide_high_level and info.level == currentExpansionMaxLevel then
 				nameText = info.name..", "..info.className

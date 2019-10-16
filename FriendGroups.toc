@@ -1,8 +1,9 @@
-
 ## Interface: 80200
 ## Title: Friend Groups
-## Author: frankkkkk
-## Version: 1.0
+## Author: Mikeprod
+## Version: @project-version@
+## X-Curse-Project-ID: 103161
+## X-WoWI-ID: 25105
 
 ## Notes: Addon managing your contact list with groups
 ## SavedVariables: FriendGroups_SavedVars

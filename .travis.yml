@@ -10,4 +10,9 @@ script: curl -s https://raw.githubusercontent.com/BigWigsMods/packager/master/re
 
 branches:
   only:
-  - /^master$|^\d+\.\d+(\.\d+)?(-\S*)?$/
+  - /^master$|^classic$|^\d+\.\d+(\.\d+)?(-\S*)?$/
+
+notifications:
+  email:
+    on_success: never
+    on_failure: always

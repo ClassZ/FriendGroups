@@ -28,3 +28,4 @@ Credits
 - 6.2 Fixes : ClassZ - [Github](https://github.com/ClassZ/FriendGroups)
 - 7.1 Fixes : Mikeprod - [Github](https://github.com/Mikeprod/FriendGroups)
 - 8.2 Fixes : y368413
+- 8.2.5 Fixes : Mudohir - [Github](https://github.com/mudohir/FriendGroups)
